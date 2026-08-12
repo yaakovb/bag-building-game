@@ -1,114 +1,114 @@
 # Development Roadmap
 
-High-level milestones after MVP 1. Each MVP is a shippable increment. Do not start a later MVP until the previous one's acceptance criteria pass.
+High-level milestones. Each MVP is a shippable increment. Do not start a later MVP until the previous one's acceptance criteria pass.
 
 ```
 MVP 1 ──► MVP 2 ──► MVP 3 ──► MVP 4 ──► Full Alpha
- Core      Heroes    Discovery   Meta       Content
- loop      & injury  & journal   progression  & polish
+ Core      Depth     Discovery   Meta       Content
+ loop      systems   & journal   & scenarios & polish
 ```
 
 ---
 
-## MVP 1 — Core Loop ✅ (current)
+## MVP 1 — Core Loop (current)
 
-**Goal:** Playable 10-turn run with bag builder, hidden retire effects, and guild tracks.
+**Goal:** Adventurers-only cards, action tokens, rotating contracts, token + assign resolution, partial outcomes.
 
 See [MVP-1.md](MVP-1.md) for full spec.
 
-**Exit criteria:** Core loop is fun; scrape feel validated; Godot project structure in place.
+**Includes:** 3 starters, bag builder, acquire/retire/act, 4 contracts, 2 guild actions, injury/death teach moment (Undead Crypt).
+
+**Exit criteria:** Core loop fun; wrong-hero-assignment tension validated; Godot scaffold in place.
 
 ---
 
-## MVP 2 — Heroes & Injury
+## MVP 2 — Roster Depth
 
-**Goal:** Cards become people. Death and injury create scrape tension beyond track numbers.
+**Goal:** Richer adventurers and guild board — not "add heroes" (already in MVP 1).
 
 ### Adds
 
-- **Hero card type** — distinct from generic guild assets; portrait placeholder, name
-- **Injury system** — heroes become Injured on certain retire Risk effects or end-of-turn checks; injured heroes have −1 retire bonus
-- **Death** — hero removed permanently; triggers memorial retire effect (hidden)
-- **Equipment slot** — one item per hero; visible stat bonus, hidden curse possible
-- **Fame spend** — use Fame to stabilize Morale or prevent injury escalation
-- **Roster limit** — guild hall size (3 heroes MVP 2)
+- **Race** on every adventurer; race × class matchup rows
+- **Full attribute model** — all five attributes on every hero with UI bars
+- **Equipment slot** — visible bonus, hidden curse; equip via guild action
+- **Injury tiers** — Injured vs Grave vs Death (Grave recoverable via costly Rest chain)
+- **More guild actions** — Scout (reveal contract line), Equip, Dismiss
+- **Third contract slot** on board
+- **Leveling cap** raised; Train improvements
 
 ### Content target
 
-- 6 hero cards, 4 equipment items, 4 non-hero guild assets
-- 4 new retire effects (injury/death related)
+- +6 adventurers, +4 contracts, +3 matchup rows per contract family
+- 6 equipment items
 
 ### Acceptance criteria
 
-- [ ] Hero can be injured, treated, and killed in a single run
-- [ ] Equipment with hidden curse discoverable via journal
-- [ ] Fame has at least one spend action
-- [ ] Player can win and lose a 15-turn run with heroes
+- [ ] Race affects at least 3 contract matchups
+- [ ] Equipment curse discoverable via journal
+- [ ] Grave injury recoverable with multi-turn Rest investment
+- [ ] 15-turn run winnable with roster management skill
 
 ---
 
 ## MVP 3 — Discovery & Exploration
 
-**Goal:** Hidden information becomes a first-class system, not just obfuscated text.
+**Goal:** Hidden information as a progression system across runs.
 
 ### Adds
 
-- **Effect category tags** refined (Morale, Treasury, Risk, Roster, Hall)
-- **Scout action** — spend tokens to reveal one hidden line before retiring
-- **Cross-run discovery journal** — persisted to disk; effects stay revealed forever
-- **Rumor hints** — between-run text snippets for undiscovered effects in the pool
-- **Synergy discoveries** — e.g. "Bard + Banner" combo logged when first triggered
-- **Offer variety** — 4-card offers; tier 3 cards introduced
+- **Cross-run discovery journal** (persisted)
+- **Rumor hints** between runs for undiscovered matchups
+- **Contract reward tiers** upgrade UI when discovered ("Good", "Poor", etc.)
+- **Scout guild action** — reveal one hidden line before committing
+- **Synergy discoveries** — multi-hero combos (e.g. Cleric + Leader on Escort)
+- **Tier 3 recruits** in offer pool
 
 ### Acceptance criteria
 
-- [ ] Journal persists across application restarts
-- [ ] Scout action works and costs tokens
-- [ ] Second run feels more informed than first without full spoilers
-- [ ] At least 3 synergies discoverable
+- [ ] Journal persists across restarts
+- [ ] Second run player makes better Undead Crypt choice without full spoiler
+- [ ] At least 5 synergies discoverable in content pool
 
 ---
 
-## MVP 4 — Meta Progression & Scenario
+## MVP 4 — Meta Progression & Scenarios
 
-**Goal:** Reason to replay. Light meta unlocks that add content, not power.
+**Goal:** Replayability through scenarios and content unlocks, not raw power.
 
 ### Adds
 
-- **Scenario select** — 2 starting scenarios (e.g. "Debtor's Guild", "Frontier Post")
-- **Unlockable card families** — Contracts, Facilities added to pools after milestones
-- **Hall upgrades** — persistent between runs within a campaign (optional roguelike mode)
-- **Rival guild pressure** — abstract clock that advances each turn; lose if it reaches end
-- **Save/load run** — mid-run persistence
-- **Balance pass** — tune all numbers from MVP 1–3 playtests
+- **2 scenarios** — different starter rosters, contract pools, win conditions
+- **Unlockable contract families** via discovery milestones
+- **Rival guild pressure** clock
+- **Hall upgrades** — passive modifiers (e.g. +1 contract slot)
+- **Save/load mid-run**
+- Balance pass on MVP 1–3 numbers
 
 ### Acceptance criteria
 
-- [ ] 2 scenarios playable start to finish
-- [ ] At least 1 card family unlocks via discovery milestone
-- [ ] Run save/load works
-- [ ] 30-minute run feels complete and replayable
+- [ ] 2 scenarios complete start to finish
+- [ ] 1 contract family gated behind discovery unlock
+- [ ] 30-minute run feels complete
 
 ---
 
 ## Full Alpha (post-MVP 4)
 
-Not a single milestone — ongoing polish track.
-
 | Area | Work |
 |------|------|
-| Art | Card frames, token icons, guild hall background |
-| Audio | UI clicks, retire sting, victory/defeat stings |
-| UX | Tutorial flow, tooltips, phase highlighting |
-| Content | 40+ cards, 6+ token types, 20+ effects |
-| Balance | Difficulty tiers, seed display for bug reports |
-| Platform | Export templates, itch.io build |
+| Art | Adventurer portraits, token icons, guild hall |
+| Audio | Assignment confirm, injury sting, victory/defeat |
+| UX | Tutorial highlighting Undead Crypt teach moment |
+| Content | 30+ adventurers, 15+ contracts, full race list |
+| Balance | Difficulty tiers, seeded runs |
+| Platform | itch.io desktop build |
 
 ---
 
 ## Principles for all milestones
 
-1. **Playable over perfect** — each MVP ships a complete run, not a feature demo.
-2. **Data-driven** — new cards and effects via data files, not code changes.
-3. **Discover, don't spoil** — meta unlocks are hints and content, not +10% power.
-4. **Tune after playtest** — numbers in docs are starting points; adjust after 3+ solo runs.
+1. **Cards are always adventurers** — contracts and guild actions live on the board, not in the bag.
+2. **Tokens are actions** — never reintroduce abstract resource tokens (gold in bag, etc.). Guild coin is the sole non-bag economy for hiring.
+3. **Clear inputs, partial outputs** — every new contract documents visible costs before hidden matchups.
+4. **Data-driven** — adventurers, contracts, matchups in JSON.
+5. **Tune after playtest** — numbers in docs are starting points.

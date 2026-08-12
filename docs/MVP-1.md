@@ -2,15 +2,22 @@
 
 ## Purpose
 
-MVP 1 validates the **core turn loop** and **classical bag-building** in Godot. It is a playable vertical slice with minimal content, placeholder art, and no meta-progression. If this isn't fun in ten turns, we fix the loop before adding heroes, injury, or discovery systems.
+MVP 1 validates the **core turn loop** in Godot with the correct conceptual model:
+
+- **Cards = adventurers only**
+- **Tokens = action types** (the five attributes)
+- **Contracts rotate each turn** and require **tokens + assigned adventurers**
+- **Outcomes are partial** — hints on the contract; full matchup results discovered through play
+
+Placeholder art, no meta-progression, minimal content. If assigning the wrong hero to a contract doesn't feel tense by turn 5, fix the loop before expanding content.
 
 ## One-sentence goal
 
-> The player can complete a full 10-turn run: acquire cards, retire for tokens, spend tokens, and win or lose — with the bag economy feeling tense and readable.
+> The player starts with 3 basic adventurers, completes a 10-turn run using acquire → retire → contract/actions, and learns at least one hidden matchup the hard way.
 
 ## Player experience (MVP 1)
 
-You are a guild master with a nearly empty hall. Each turn you pick a card from a small offer, retire one card to draw tokens from the bag, and spend those tokens to keep the guild afloat. Basics are free; better cards cost tokens. You don't know exactly what retiring a card will do to the guild — only that it belongs to a category (Morale, Risk, etc.). You scrape by until you hit the season goal or go broke.
+You inherit a guild with three green adventurers. Each turn new heroes appear for hire (basics free, better ones cost guild coin). You retire one veteran to draw action tokens from the bag — Attack, Defense, Magic, Support, Leadership. You spend those tokens and pick who goes on this week's contracts. The crypt contract says it needs Attack and Magic; a note mentions holy specialists. You send the cleric and hope. The fighter sits out — or you risk him and learn why that was a mistake.
 
 ## Scope
 
@@ -18,162 +25,243 @@ You are a guild master with a nearly empty hall. Each turn you pick a card from 
 
 | Area | MVP 1 delivery |
 |------|----------------|
-| Turn state machine | Acquire → Retire → Spend → End Turn |
+| Turn state machine | Acquire → Retire → Act → End Turn |
 | Bag builder | Discard pile, bag draw, shuffle-when-empty |
-| Card offer | 3 cards per turn: 1 free basic + 2 priced |
-| Acquire | Pick card, pay cost, add listed tokens to discard |
-| Retire | Pick in-play card, draw `2 + level + bonus`, apply retire effect |
-| Spend | Spend drawn tokens on guild tracks or card upgrades |
-| Guild tracks | **Morale** and **Treasury** only (0–10 each) |
-| Card upgrades | Pay tokens to raise card level (+1 retire draw per level) |
-| Hidden retire effects | 6 effect types; show category tag only until first trigger |
-| Discovery journal | In-run log of revealed effects |
-| Win / lose | Win at Treasury ≥ 8 after turn 10; lose if Morale = 0 or Treasury = 0 |
-| Content | 8 card definitions, 3 token types |
-| UI | Single main screen: offer, in-play cards, bag/discard counts, guild tracks, journal panel |
-| Persistence | None (single session) |
+| **Adventurers only** | All cards are heroes; no other card types |
+| **Starting roster** | 3 basic adventurers at run start |
+| Action tokens | 5 types: Attack, Defense, Magic, Support, Leadership |
+| Acquire offer | 3 adventurers per turn: 1 free basic + 2 priced |
+| Retire | Draw `2 + level + bonus`; hidden retire guild effect |
+| **Contracts board** | 2 contracts refreshed each turn |
+| **Guild actions** | 2 fixed actions (Rest, Train) |
+| **Act phase** | Pay tokens + assign adventurers; resolve outcomes |
+| Partial outcomes | Hints on contracts; hidden matchup table |
+| Injury | 2 tiers: Injured, Grave (MVP death = removed from roster) |
+| Discovery journal | In-run log of first-time matchup and retire reveals |
+| Guild coin | Separate from bag — pays acquire costs only |
+| Win / lose | Win after turn 10 with ≥ 2 living adventurers and ≥ 5 guild coin; lose if roster wiped or guild coin ≤ 0 |
+| Content | 3 starters + 6 recruitable + 4 contracts + 2 guild actions |
+| UI | Single screen: roster, offer, contracts, actions, bag, journal |
+| Persistence | None |
 
 ### Out of scope (deferred)
 
-- Heroes as distinct entities (injury, death, equipment)
-- Contracts, Facilities, Patrons card families
+- Race (attribute + class only in MVP 1)
+- Equipment
 - Meta-progression between runs
-- Map, events, shops, rival guilds
-- Audio, animations, polished art
+- Scout / reveal guild action
+- More than 2 contract slots or 2 guild actions
 - Save/load
-- Tutorial beyond a one-screen "how to play"
-- Scout/reveal actions
-- More than one scenario
+- Audio, polished art
+- Full five-attribute stat blocks on every hero (starters use simplified display)
 
 ## Turn flow (MVP 1 detail)
 
+### Setup
+
+- **Roster:** 3 basic adventurers (see starter table below).
+- **Bag:** 2 of each action token (10 total) in the bag at start.
+- **Guild coin:** 5 (acquire costs only; not drawn from bag).
+- **Contracts:** Draw 2 from contract pool for turn 1.
+
 ### Phase 0 — Turn start
 
-- Increment turn counter (displayed).
-- Generate offer: **1 Basic (tier 0, cost 0)** + **2 cards** drawn from the priced pool (tier 1–2).
-- If offer cannot be filled (edge case), fill with basics.
+- Increment turn counter.
+- Refresh **2 contracts** from the pool (can repeat; no duplicate display on board if pool exhausted).
+- Generate acquire offer: **1 free basic** + **2 priced** adventurers.
 
 ### Phase 1 — Acquire
 
-- Player selects exactly **one** card from the offer.
-- **Cost:** Shown on card. Deduct from **Treasury** (not from bag tokens). Free cards cost 0.
-- **Effect:** Card enters the **in-play row** (max 5 cards; if full, player must retire before acquire next turn — see note below).
-- **Discard contribution:** Listed token types/amounts added to **discard pile** immediately.
-
-> **Hand limit note:** MVP 1 enforces max 5 in-play cards. If at cap at start of Acquire, skip to Retire first OR force retire before acquire. **Decision: force Retire before Acquire when at cap** (retire phase comes first if hand is full).
-
-**Revised order when hand full:** Retire → Acquire → Spend → End.
-
-Normal order when hand not full: Acquire → Retire → Spend → End.
+- Player picks **one** offered adventurer.
+- **Cost:** Deduct **guild coin** (visible on card). Basics cost 0.
+- **Roster limit:** Max 5 adventurers. If full, **Retire happens before Acquire** this turn.
+- **Effect:** Adventurer joins roster; their **bag contribution** (action tokens) added to **discard pile**.
 
 ### Phase 2 — Retire
 
-- Player selects exactly **one** in-play card.
-- **Draw:** Pull `2 + card.level + card.retire_bonus` tokens from bag. If bag insufficient, shuffle discard into bag, then continue drawing.
-- **Retire effect:** Resolve the card's hidden guild effect (see effect table). Log to discovery journal if first time seen.
-- **Remove** card from play permanently (MVP 1: no memorial mechanics).
+- Player selects **one** roster adventurer to retire.
+- **Draw:** `2 + level + retire_bonus` tokens from bag. Shuffle discard into bag if empty mid-draw.
+- **Retire effect:** Resolve hidden guild effect; log to journal if new.
+- **Remove** adventurer permanently.
 
-### Phase 3 — Spend
+> **Cannot retire** the only living adventurer if it would leave 0 (must keep at least 1).
 
-- Player spends **any or all** drawn tokens (unspent tokens are lost at end of turn — creates scrape pressure).
-- **Allowed actions:**
+### Phase 3 — Act
 
-| Action | Cost | Effect |
-|--------|------|--------|
-| Boost Morale | 2 Supply | Morale +1 (max 10) |
-| Fill Treasury | 2 Coin | Treasury +1 (max 10) |
-| Upgrade card | 3 Coin + 1 Supply | Target in-play card level +1 (max 3) |
+Player spends **drawn tokens** (this turn only) on **contracts** and/or **guild actions**. Each activity:
 
-- Tokens are **typed** and **fungible only within spend recipes** (player must have exact types).
+1. Pay listed **action token** costs from drawn pool.
+2. Assign **required adventurers** from roster (not injured unless action allows).
+3. Resolve — apply visible + hidden outcomes.
+
+- Player may perform **multiple activities** if tokens and adventurers allow.
+- **Unspent drawn tokens** are lost at end of turn.
+- Same adventurer **cannot** be assigned to two activities in one turn.
+
+#### Contracts (2 per turn)
+
+See contract table below. Each shows:
+
+- Token cost (visible)
+- Adventurer count (visible)
+- **Hint line** (partial outcome)
+- **Risk tag** if injury possible (partial)
+
+#### Guild actions (always available)
+
+| Action | Token cost | Assign | Visible result | Hidden |
+|--------|------------|--------|----------------|--------|
+| **Rest** | 1 Support | 1 injured adventurer | "Recover from injury" | 70% heal / 30% stay injured |
+| **Train** | 1 Leadership | 1 healthy adventurer | "Gain experience" | Level +1, or injured on bad luck |
 
 ### Phase 4 — End turn
 
-- Check lose: Morale ≤ 0 or Treasury ≤ 0 → **defeat**.
-- Check win: Turn ≥ 10 AND Treasury ≥ 8 → **victory**.
+- Lose if: **guild coin ≤ 0** OR **zero living adventurers**.
+- Win if: **turn ≥ 10** AND **≥ 2 living adventurers** AND **guild coin ≥ 5**.
 - Clear unspent drawn tokens.
-- Next turn.
+- Injured adventurers stay injured until Rest or contract outcome heals them.
 
-## Token types (MVP 1)
+## Action tokens (MVP 1)
 
-| Token | Color | Role |
-|-------|-------|------|
-| **Coin** | Gold | Treasury spending, upgrades |
-| **Supply** | Brown | Morale healing, upgrades |
-| **Fame** | Purple | No spend use in MVP 1 (bag dilution / future hook) |
+Tokens are **not resources**. They are the actions the guild can take this turn.
 
-Fame tokens enter the bag via cards but cannot be spent in MVP 1. This teaches dilution without extra systems.
+| Token | Attribute | Used for |
+|-------|-----------|----------|
+| Attack | Attack | Martial contracts |
+| Defense | Defense | Holding / escort contracts |
+| Magic | Magic | Arcane or holy contracts |
+| Support | Support | Rest, logistics-heavy contracts |
+| Leadership | Leadership | Train, coordination contracts |
 
-## Card content (MVP 1)
+## Adventurer model (MVP 1)
 
-8 cards total. All are generic "Guild Assets" (no hero identity yet).
+### Attributes
 
-### Basics (tier 0, cost 0) — 2 definitions
+Each adventurer has values for all five attributes (0–3 in MVP 1). Attributes:
 
-| ID | Name | To discard | Retire bonus | Hidden effect tag |
-|----|------|--------------|--------------|-------------------|
-| `basic_supplies` | Supply Crate | 2 Supply | 0 | Morale |
-| `basic_coins` | Coin Purse | 2 Coin | 0 | Treasury |
+- Are **visible** on the card.
+- Determine **which tokens they add to discard** when acquired (see bag contribution).
+- Gate **hidden contract matchups** (class + attribute thresholds).
 
-### Tier 1 (cost 1 Treasury) — 3 definitions
+Full race system deferred; **class** is the primary matchup key in MVP 1.
 
-| ID | Name | To discard | Retire bonus | Hidden effect tag |
-|----|------|--------------|--------------|-------------------|
-| `merchant_contact` | Merchant Contact | 1 Coin, 1 Supply | 0 | Treasury |
-| `bard_recruit` | Tavern Bard | 1 Fame, 1 Supply | 0 | Morale |
-| `scout_map` | Scout's Map | 1 Coin, 1 Fame | 1 | Risk |
+### Starter roster (3 basic adventurers)
 
-### Tier 2 (cost 2 Treasury) — 3 definitions
+| ID | Name | Class | Atk | Def | Mag | Sup | Ldr | Bag contribution | Retire bonus |
+|----|------|-------|-----|-----|-----|-----|-----|------------------|--------------|
+| `starter_fighter` | Tomás | Fighter | 2 | 1 | 0 | 0 | 0 | 2 Attack | 0 |
+| `starter_cleric` | Sister Maren | Cleric | 0 | 1 | 2 | 1 | 0 | 1 Magic, 1 Support | 0 |
+| `starter_ranger` | Edda | Ranger | 1 | 1 | 0 | 1 | 1 | 1 Attack, 1 Leadership | 0 |
 
-| ID | Name | To discard | Retire bonus | Hidden effect tag |
-|----|------|--------------|--------------|-------------------|
-| `guild_banner` | Guild Banner | 2 Fame, 1 Supply | 0 | Morale |
-| `vault_key` | Vault Key | 3 Coin | 1 | Treasury |
-| `old_contract` | Old Contract | 2 Coin, 2 Fame | 0 | Risk |
+All starters: level 1, cost 0, retire effect tag **Morale**.
+
+### Recruitable pool (6 adventurers)
+
+| ID | Name | Class | Tier | Cost | Bag contribution | Retire bonus | Tag |
+|----|------|-------|------|------|------------------|--------------|-----|
+| `recruit_squire` | Young Squire | Fighter | 0 | 0 | 2 Attack | 0 | Morale |
+| `recruit_acolyte` | Acolyte | Cleric | 0 | 0 | 1 Magic, 1 Support | 0 | Morale |
+| `recruit_bard` | Tavern Bard | Bard | 1 | 2 | 1 Support, 1 Leadership | 0 | Morale |
+| `recruit_knight` | Hedge Knight | Fighter | 1 | 3 | 2 Attack, 1 Defense | 1 | Treasury |
+| `recruit_mage` | Hedge Mage | Mage | 2 | 4 | 2 Magic | 1 | Risk |
+| `recruit_captain` | Retired Captain | Leader | 2 | 5 | 2 Leadership, 1 Defense | 0 | Treasury |
+
+Attribute blocks for recruits defined in data files (not all listed here — implementer fills from class templates).
+
+## Contracts (MVP 1)
+
+Four definitions in pool; 2 shown per turn.
+
+| ID | Name | Token cost | Send | Hint (partial) | Risk tag |
+|----|------|------------|------|----------------|----------|
+| `contract_undead` | Clear Undead Crypt | 2 Attack, 1 Magic | 1–2 | "Holy specialists thrive against undead" | High |
+| `contract_escort` | Escort Merchant | 1 Defense, 1 Leadership | 1–2 | "A steady blade and a calm voice" | Low |
+| `contract_bandits` | Drive Off Bandits | 2 Attack | 1–3 | "Sheer force works — but someone may get hurt" | Medium |
+| `contract_ritual` | Disrupt Dark Ritual | 2 Magic, 1 Support | 1–2 | "Without support, the party unravels" | Medium |
+
+### Hidden matchup outcomes (MVP 1)
+
+Logged to journal on first trigger.
+
+| Contract | Condition (assigned adventurer) | Outcome |
+|----------|----------------------------------|---------|
+| **Undead Crypt** | Cleric assigned | +3 guild coin, hint revealed |
+| **Undead Crypt** | Fighter assigned (no Cleric) | Fighter → **Grave injury** (death in MVP 1) |
+| **Undead Crypt** | Ranger only | +1 guild coin, Ranger injured |
+| **Escort Merchant** | Leadership ≥ 1 on any assignee | +2 guild coin |
+| **Escort Merchant** | No Defense token spent... | (cost already requires Defense — mismatch if injured Def hero sent) |
+| **Bandits** | Attack ≥ 2 on any assignee | +3 guild coin |
+| **Bandits** | Any assignee Attack 0 | Assignee injured |
+| **Dark Ritual** | Mage or Cleric + Support ≥ 1 | +4 guild coin |
+| **Dark Ritual** | No Support in party | All assignees injured |
+
+MVP 1 implements **at least 6 distinct matchup rows** across the four contracts; Undead + Cleric/Fighter is the **tutorial teach moment**.
+
+### Visible vs hidden on contract card UI
+
+```
+┌─────────────────────────────────────┐
+│  CLEAR UNDEAD CRYPT                 │
+│  Cost: ⚔×2  ✦×1                     │
+│  Send: 1–2 adventurers              │
+│  "Holy specialists thrive..."       │
+│  Risk: HIGH                         │
+│  Reward: ???                        │  ← hidden until discovered or resolved
+└─────────────────────────────────────┘
+```
+
+After first Cleric success, journal shows reward tier; contract UI may upgrade to "Reward: Good (discovered)".
 
 ## Hidden retire effects (MVP 1)
 
-Category tag shown on card before retire. Exact effect revealed on first trigger in the run.
+Tag visible on adventurer card. Six effects in data:
 
-| Tag | Effect (on retire) | Design intent |
-|-----|-------------------|---------------|
-| **Morale** | Morale +2 | Relief |
-| **Morale** | Morale −1 | Scrape tax |
-| **Treasury** | Treasury +1 | Windfall |
-| **Treasury** | Treasury −1 | Hidden cost |
-| **Risk** | Morale −2, then draw +1 extra token | High risk scrape |
-| **Risk** | 50% Morale −1 / 50% Treasury +2 | Variance |
+| Tag | Example effect |
+|-----|----------------|
+| Morale | Next acquire offer includes 1 extra basic |
+| Morale | Lose 1 guild coin |
+| Treasury | +2 guild coin |
+| Treasury | +1 guild coin, next contract Risk +1 display |
+| Risk | Draw +1 token, random assignee injured if any contract failed this turn |
 
-Each card is assigned one effect from its tag column at data definition time (not random per trigger).
+## Guild coin (MVP 1)
 
-## Guild tracks (MVP 1)
+- **Not** an action token. Simple run track for acquire costs and contract rewards.
+- Starting: 5. Win requires ≥ 5. Lose if ≤ 0.
+- Keeps acquire economy readable without conflating bag actions with hiring budget.
 
-| Track | Start | Lose trigger | Notes |
-|-------|-------|--------------|-------|
-| Morale | 5 | ≤ 0 = defeat | Spend Supply to recover |
-| Treasury | 3 | ≤ 0 = defeat | Earn via spend action or retire effects |
+## Injury (MVP 1)
+
+| State | Effect |
+|-------|--------|
+| Healthy | Can be assigned |
+| Injured | Cannot assign; must Rest or receive heal outcome |
+| Grave | Adventurer dies (removed); MVP 1 has no recovery |
 
 ## UI wireframe (MVP 1)
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  Turn 3/10          Morale: ██████░░░░  Treasury: ███░░░░░░░ │
-├──────────────────────────────────────────────────────────────┤
-│  OFFER (pick one)                                            │
-│  [ Basic: Supply Crate ] [ Merchant Contact ① ] [ Bard ① ] │
-├──────────────────────────────────────────────────────────────┤
-│  IN PLAY (retire one)                    Bag: 12  Discard: 8 │
-│  [ Scout's Map  Lv1 ] [ Coin Purse ] [ Guild Banner Lv2 ]   │
-├──────────────────────────────────────────────────────────────┤
-│  DRAWN THIS TURN:  ●Coin ●Coin ●Supply ●Fame                 │
-│  SPEND: [Morale +1] [Treasury +1] [Upgrade selected]       │
-├──────────────────────────────────────────────────────────────┤
-│  JOURNAL: "Old Contract — Risk: Morale −2, draw +1" (new!)   │
-├──────────────────────────────────────────────────────────────┤
-│                              [ END TURN ]                    │
-└──────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│  Turn 4/10    Guild coin: 6    Bag: 8    Discard: 11             │
+├────────────────────────────────────────────────────────────────────┤
+│  ROSTER                          DRAWN THIS TURN                   │
+│  [Tomás Fighter L1 ⚔2]           ⚔ ⚔ ✦ ⊕ ★                        │
+│  [Maren Cleric L1]  injured      (Attack Defense Magic Support Lead)│
+│  [Edda Ranger L1]                                                │
+├────────────────────────────────────────────────────────────────────┤
+│  CONTRACTS (pick + assign)         GUILD ACTIONS                   │
+│  [Undead Crypt] [Escort]         [Rest] [Train]                    │
+├────────────────────────────────────────────────────────────────────┤
+│  OFFER (acquire one)                                               │
+│  [Squire 0] [Hedge Knight 3] [Bard 2]                              │
+├────────────────────────────────────────────────────────────────────┤
+│  JOURNAL: "Undead Crypt + Cleric → bonus reward (+3 coin)" NEW    │
+├────────────────────────────────────────────────────────────────────┤
+│  [ RETIRE... ]                              [ END TURN ]           │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
-Placeholder: colored rectangles + text labels. No illustration required.
+Flow note: Retire button opens picker; Act phase uses drag-or-click assign then confirm per contract/action.
 
 ## Godot architecture (MVP 1)
 
@@ -182,110 +270,108 @@ Placeholder: colored rectangles + text labels. No illustration required.
 ```
 res://
 ├── scenes/
-│   ├── main.tscn              # Entry point
-│   ├── ui/
-│   │   ├── game_screen.tscn
-│   │   ├── card_view.tscn
-│   │   └── journal_panel.tscn
+│   ├── main.tscn
+│   └── ui/
+│       ├── game_screen.tscn
+│       ├── adventurer_card.tscn
+│       ├── contract_card.tscn
+│       └── journal_panel.tscn
 ├── scripts/
 │   ├── autoload/
-│   │   ├── game_state.gd      # Turn phase, win/lose
+│   │   ├── game_state.gd
 │   │   └── discovery_journal.gd
 │   ├── systems/
 │   │   ├── bag.gd
 │   │   ├── offer_generator.gd
+│   │   ├── contract_board.gd
+│   │   ├── matchup_resolver.gd
 │   │   └── effect_resolver.gd
 │   ├── models/
-│   │   ├── card_data.gd       # Resource
-│   │   └── token_type.gd
+│   │   ├── adventurer_data.gd
+│   │   ├── contract_data.gd
+│   │   ├── guild_action_data.gd
+│   │   └── action_token.gd
 │   └── ui/
 │       └── game_screen.gd
 ├── data/
-│   └── cards/                 # .tres or .json per card
-└── docs/                      # (repo root docs/, linked in README)
+│   ├── adventurers/
+│   ├── contracts/
+│   ├── guild_actions/
+│   └── matchups/
+└── docs/
 ```
 
 ### Key classes
 
 | Class | Responsibility |
 |-------|----------------|
-| `GameState` | Phase enum, turn counter, guild tracks, in-play cards |
-| `Bag` | Token list, draw, discard, shuffle |
-| `CardData` | Resource: id, tier, cost, discard contribution, retire bonus, effect id |
-| `EffectResolver` | Map effect id → guild mutations |
-| `OfferGenerator` | Build 3-card offer from pools |
-| `DiscoveryJournal` | Append-only revealed effect log |
+| `GameState` | Phase enum, turn counter, roster, guild coin, drawn tokens |
+| `Bag` | Action token list, draw, discard-to-bag shuffle |
+| `AdventurerData` | Class, attributes, bag contribution, retire fields |
+| `ContractBoard` | Refresh 2 contracts per turn |
+| `MatchupResolver` | Assigned heroes + contract → outcomes |
+| `DiscoveryJournal` | First-time reveal log |
 
 ### State machine
 
 ```
-INIT → [HAND_FULL ? RETIRE : ACQUIRE] → RETIRE → SPEND → END_TURN → (win/lose check) → ...
+INIT → [ROSTER_FULL ? RETIRE : ACQUIRE] → RETIRE → ACT → END_TURN → ...
 ```
 
 ## Acceptance criteria
 
-MVP 1 is **done** when all of the following are true:
-
-- [ ] Godot 4 project runs without errors on desktop
-- [ ] Player can complete a full 10-turn run start to finish
-- [ ] Bag shuffles discard when empty mid-draw
-- [ ] Acquire cost deducts from Treasury; free basics always offered
-- [ ] Retire draw uses `2 + level + bonus` correctly
-- [ ] At least 6 distinct hidden retire effects work and log to journal on first reveal
-- [ ] Spend actions consume correct token types
-- [ ] Win (Treasury ≥ 8 at turn 10) and lose (Morale or Treasury at 0) screens appear
-- [ ] Card upgrade raises level and increases next retire draw
-- [ ] Fame tokens dilute the bag but cannot be spent (intentional friction)
-- [ ] No hard-coded card logic in UI scripts — all card data driven from files
+- [ ] Godot 4 project runs on desktop without errors
+- [ ] Run starts with exactly 3 basic adventurers
+- [ ] All cards are adventurers — no non-hero card type exists
+- [ ] Five action token types; no "gold/supply" resource tokens in bag
+- [ ] Acquire adds correct tokens to discard; priced hires cost guild coin
+- [ ] Retire draws `2 + level + bonus`; shuffle-when-empty works
+- [ ] 2 contracts refresh each turn
+- [ ] Contract resolution requires token payment + adventurer assignment
+- [ ] Undead Crypt: Cleric → bonus coin; Fighter alone → severe outcome (death/injury)
+- [ ] Rest and Train guild actions work with token + assign rules
+- [ ] Partial hints visible on contracts; full matchup logs to journal once
+- [ ] Win and lose screens trigger correctly
+- [ ] All content driven from data files
 
 ## Success metrics (playtest)
 
-After internal playtest (solo, 3+ runs):
-
-1. **Readability:** Player can explain the turn loop without help after turn 2.
-2. **Scrape feel:** Player reports feeling token-poor at least 50% of turns.
-3. **Tension:** Retire decisions feel meaningful (not obvious auto-picks).
-4. **Discovery:** Player is surprised at least once by a hidden retire effect in a run.
-5. **Bag math:** Player notices Fame diluting their draws by turn 5–7.
-
-## Risks & mitigations
-
-| Risk | Mitigation |
-|------|------------|
-| Hidden effects feel unfair | MVP 1 effects are mild (+/−1 or +/−2); tags telegraph category |
-| Too few cards → repetitive | 8 cards × offer randomness = enough for 10 turns; expand in MVP 2 |
-| Fame feels bad with no use | Journal entry teases "Fame may matter later"; MVP 2 gives Fame spends |
-| Hand limit confuses | UI banner when at cap: "Retire first — hall is full" |
+1. Player identifies action tokens as "what I can do" not "currency" by turn 2.
+2. Player hesitates before assigning fighter to Undead Crypt after reading hint.
+3. At least one "I didn't know that would happen" moment per run from hidden matchup.
+4. Retire decision competes with keeping a leveled hero for contracts.
 
 ## Open questions (resolve before implementation)
 
 | # | Question | Proposed default |
 |---|----------|------------------|
-| 1 | Data format: `.tres` Resources vs JSON? | **JSON** for faster iteration outside Godot |
-| 2 | Unspent tokens: lost or banked? | **Lost** (scrape pressure) |
-| 3 | Starting bag contents? | 4 Coin, 4 Supply, 2 Fame (10 total) |
-| 4 | Can player skip spend? | **Yes** — confirm with End Turn |
-| 5 | Show bag composition to player? | **Counts by type in discard; bag shows total only** |
+| 1 | Grave injury = death in MVP 1? | **Yes** — simpler; injury tiers expand in MVP 2 |
+| 2 | Guild coin name in UI? | **Guild coin** (flavor: paying recruits, contract fees) |
+| 3 | Show attribute numbers on card faces? | **Yes** — inputs stay clear |
+| 4 | Multiple contracts per turn? | **Yes**, if tokens and heroes allow |
+| 5 | Data format | **JSON** |
 
 ## Implementation order
 
-1. `Bag` — draw, shuffle, discard (unit-testable)
-2. `CardData` + JSON loader — 8 cards
-3. `GameState` — phase machine, guild tracks
-4. `EffectResolver` — 6 effects
-5. `GameScreen` UI — wire phases to buttons
-6. Win/lose screens
-7. Discovery journal panel
-8. Playtest pass and tune numbers
+1. `Bag` + `ActionToken` enum (five types)
+2. `AdventurerData` + starters + recruit pool JSON
+3. `GameState` phase machine + roster
+4. `ContractBoard` + `MatchupResolver`
+5. Acquire + Retire phases
+6. Act phase UI (assign + pay)
+7. Guild actions Rest / Train
+8. Journal + win/lose
+9. Playtest Undead Crypt teach moment
 
 ## Estimated content budget
 
 | Asset | Count |
 |-------|-------|
-| Card definitions | 8 |
-| Token types | 3 |
+| Adventurers | 9 (3 starter + 6 recruit) |
+| Action token types | 5 |
+| Contracts | 4 |
+| Guild actions | 2 |
+| Matchup rows | 6+ |
 | Retire effects | 6 |
-| Scenes | 4–5 |
-| Scripts | ~10 |
 
-Placeholder art only. No external assets required.
+Placeholder art only.

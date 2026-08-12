@@ -1,6 +1,6 @@
 # Bag Building Game
 
-A fantasy guild-management bag-builder built in Godot. You run a struggling adventurers' guild — scrape resources from a token bag, recruit and retire cards, and discover hidden consequences as you play.
+A fantasy guild-management bag-builder built in Godot. Every card is an adventurer. Retire veterans to draw **action tokens** (Attack, Defense, Magic, Support, Leadership), then assign heroes to rotating **contracts** and guild duties — paying tokens and risking matchups you only partly understand.
 
 ## Documentation
 
