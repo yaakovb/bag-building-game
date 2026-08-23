@@ -1,0 +1,38 @@
+{
+  "contract_undead": {
+    "id": "contract_undead",
+    "name": "Clear Undead Crypt",
+    "token_cost": { "attack": 2, "magic": 1 },
+    "min_adventurers": 1,
+    "max_adventurers": 2,
+    "hint": "Holy specialists thrive against undead",
+    "risk_tag": "High"
+  },
+  "contract_escort": {
+    "id": "contract_escort",
+    "name": "Escort Merchant",
+    "token_cost": { "defense": 1, "leadership": 1 },
+    "min_adventurers": 1,
+    "max_adventurers": 2,
+    "hint": "A steady blade and a calm voice",
+    "risk_tag": "Low"
+  },
+  "contract_bandits": {
+    "id": "contract_bandits",
+    "name": "Drive Off Bandits",
+    "token_cost": { "attack": 2 },
+    "min_adventurers": 1,
+    "max_adventurers": 3,
+    "hint": "Sheer force works — but someone may get hurt",
+    "risk_tag": "Medium"
+  },
+  "contract_ritual": {
+    "id": "contract_ritual",
+    "name": "Disrupt Dark Ritual",
+    "token_cost": { "magic": 2, "support": 1 },
+    "min_adventurers": 1,
+    "max_adventurers": 2,
+    "hint": "Without support, the party unravels",
+    "risk_tag": "Medium"
+  }
+}

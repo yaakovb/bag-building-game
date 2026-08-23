@@ -1,0 +1,118 @@
+[gd_scene load_steps=2 format=3 uid="uid://game_screen"]
+
+[ext_resource type="Script" path="res://scripts/ui/game_screen.gd" id="1"]
+
+[node name="GameScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "Header"
+
+[node name="PhaseLabel" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "Phase"
+
+[node name="MessageLabel" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "Message"
+
+[node name="DrawnLabel" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "Drawn"
+
+[node name="RosterLabel" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "Roster"
+
+[node name="RosterBox" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+
+[node name="ContractsLabel" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "Contracts"
+
+[node name="ContractsBox" type="VBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+
+[node name="ActionsLabel" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "Guild Actions"
+
+[node name="ActionsBox" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+
+[node name="OfferLabel" type="Label" parent="Margin/VBox"]
+layout_mode = 2
+text = "Offer (Acquire)"
+
+[node name="OfferBox" type="HBoxContainer" parent="Margin/VBox"]
+layout_mode = 2
+
+[node name="ConfirmContractButton" type="Button" parent="Margin/VBox"]
+layout_mode = 2
+text = "Confirm Contract"
+
+[node name="EndTurnButton" type="Button" parent="Margin/VBox"]
+layout_mode = 2
+text = "End Turn"
+
+[node name="JournalList" type="RichTextLabel" parent="Margin/VBox"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+fit_content = true
+
+[node name="GameOverPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -80.0
+offset_right = 200.0
+offset_bottom = 80.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="GameOverPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="GameOverPanel/Margin"]
+layout_mode = 2
+
+[node name="GameOverLabel" type="Label" parent="GameOverPanel/Margin/VBox"]
+layout_mode = 2
+text = "Game Over"
+
+[node name="NewRunButton" type="Button" parent="GameOverPanel/Margin/VBox"]
+layout_mode = 2
+text = "New Run"

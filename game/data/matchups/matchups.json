@@ -1,0 +1,107 @@
+[
+  {
+    "contract_id": "contract_undead",
+    "priority": 100,
+    "conditions": { "has_class": "Cleric" },
+    "outcomes": {
+      "guild_coin": 3,
+      "discovered_reward": "Good (discovered)",
+      "journal_message": "Undead Crypt + Cleric → bonus reward (+3 coin)"
+    },
+    "journal_key": "undead_cleric",
+    "stop_after_match": true
+  },
+  {
+    "contract_id": "contract_undead",
+    "priority": 90,
+    "conditions": { "has_class": "Fighter", "not_has_class": "Cleric" },
+    "outcomes": {
+      "grave_injury_class": "Fighter",
+      "journal_message": "Undead Crypt + Fighter (no Cleric) → fighter died"
+    },
+    "journal_key": "undead_fighter",
+    "stop_after_match": true
+  },
+  {
+    "contract_id": "contract_undead",
+    "priority": 80,
+    "conditions": { "only_class": "Ranger" },
+    "outcomes": {
+      "guild_coin": 1,
+      "injure_class": "Ranger",
+      "journal_message": "Undead Crypt + Ranger only → meager pay, ranger injured"
+    },
+    "journal_key": "undead_ranger",
+    "stop_after_match": true
+  },
+  {
+    "contract_id": "contract_escort",
+    "priority": 70,
+    "conditions": { "any_attribute_at_least": { "attribute": "leadership", "value": 1 } },
+    "outcomes": {
+      "guild_coin": 2,
+      "discovered_reward": "Fair (discovered)",
+      "journal_message": "Escort Merchant + leadership → steady pay (+2 coin)"
+    },
+    "journal_key": "escort_leadership",
+    "stop_after_match": true
+  },
+  {
+    "contract_id": "contract_bandits",
+    "priority": 70,
+    "conditions": { "any_attribute_at_least": { "attribute": "attack", "value": 2 } },
+    "outcomes": {
+      "guild_coin": 3,
+      "discovered_reward": "Good (discovered)",
+      "journal_message": "Bandits + strong attack → +3 coin"
+    },
+    "journal_key": "bandits_attack",
+    "stop_after_match": true
+  },
+  {
+    "contract_id": "contract_bandits",
+    "priority": 60,
+    "conditions": { "any_attribute_zero": "attack" },
+    "outcomes": {
+      "injure_all_assignees": true,
+      "journal_message": "Bandits + weak attack → assignee injured"
+    },
+    "journal_key": "bandits_weak",
+    "stop_after_match": true
+  },
+  {
+    "contract_id": "contract_ritual",
+    "priority": 80,
+    "conditions": { "has_class": "Cleric" },
+    "outcomes": {
+      "guild_coin": 4,
+      "discovered_reward": "Excellent (discovered)",
+      "journal_message": "Dark Ritual + Cleric → +4 coin"
+    },
+    "journal_key": "ritual_cleric",
+    "stop_after_match": true
+  },
+  {
+    "contract_id": "contract_ritual",
+    "priority": 79,
+    "conditions": { "has_class": "Mage", "any_attribute_at_least": { "attribute": "support", "value": 1 } },
+    "outcomes": {
+      "guild_coin": 4,
+      "discovered_reward": "Excellent (discovered)",
+      "journal_message": "Dark Ritual + Mage with party support → +4 coin"
+    },
+    "journal_key": "ritual_mage_support",
+    "stop_after_match": true
+  },
+  {
+    "contract_id": "contract_ritual",
+    "priority": 50,
+    "conditions": { "no_support_in_party": true },
+    "outcomes": {
+      "injure_all_assignees": true,
+      "journal_message": "Dark Ritual without support → all assignees injured"
+    },
+    "journal_key": "ritual_no_support",
+    "stop_after_match": true
+  }
+]

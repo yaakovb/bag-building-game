@@ -1,0 +1,16 @@
+{
+  "action_rest": {
+    "id": "action_rest",
+    "name": "Rest",
+    "token_cost": { "support": 1 },
+    "requires_injured": true,
+    "description": "Recover from injury"
+  },
+  "action_train": {
+    "id": "action_train",
+    "name": "Train",
+    "token_cost": { "leadership": 1 },
+    "requires_injured": false,
+    "description": "Gain experience"
+  }
+}
