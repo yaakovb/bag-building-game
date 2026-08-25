@@ -172,10 +172,17 @@ func _build_contracts() -> void:
 
 		var select_button := Button.new()
 		var resolved: bool = GameState.resolved_contracts.has(contract_id)
-		select_button.text = "Select for assignment" if not resolved else "Already resolved"
+		select_button.text = "Select for assignment" if not resolved else "Contract completed"
 		select_button.disabled = resolved
-		select_button.pressed.connect(func(): _select_contract(contract_id))
+		if not resolved:
+			select_button.pressed.connect(func(): _select_contract(contract_id))
 		panel.add_child(select_button)
+
+		if resolved:
+			var result_label := Label.new()
+			result_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			result_label.text = _format_contract_result(GameState.get_contract_result(contract_id))
+			panel.add_child(result_label)
 
 		if _selected_contract_id == contract_id:
 			var marker := Label.new()
@@ -189,6 +196,40 @@ func _select_contract(contract_id: String) -> void:
 	_selected_contract_id = contract_id
 	_selected_assignees.clear()
 	_refresh()
+
+
+func _format_contract_result(result: Dictionary) -> String:
+	if result.is_empty():
+		return "Result: Contract completed."
+
+	var parts: PackedStringArray = []
+	var assignees: Array = result.get("assignees", [])
+	if assignees.is_empty():
+		parts.append("Sent: (none)")
+	else:
+		parts.append("Sent: %s" % ", ".join(assignees))
+
+	var coin_delta: int = int(result.get("guild_coin_delta", 0))
+	if coin_delta > 0:
+		parts.append("+%d guild coin" % coin_delta)
+	elif coin_delta < 0:
+		parts.append("%d guild coin" % coin_delta)
+	else:
+		parts.append("No coin reward")
+
+	var reward_label: String = String(result.get("reward_label", ""))
+	if not reward_label.is_empty():
+		parts.append("Reward tier: %s" % reward_label)
+
+	var injured: Array = result.get("injured", [])
+	if not injured.is_empty():
+		parts.append("Injured: %s" % ", ".join(injured))
+
+	var killed: Array = result.get("killed", [])
+	if not killed.is_empty():
+		parts.append("Killed: %s" % ", ".join(killed))
+
+	return "Result: " + " | ".join(parts)
 
 
 func _build_guild_actions() -> void:

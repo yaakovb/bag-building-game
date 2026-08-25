@@ -57,6 +57,12 @@ func _run_tests() -> Array:
 			errors.append("Failed to resolve undead contract with cleric")
 		elif gs.guild_coin < coin_before + 3:
 			errors.append("Cleric undead contract should grant +3 coin")
+		else:
+			var result: Dictionary = gs.get_contract_result("contract_undead")
+			if result.is_empty():
+				errors.append("Expected contract result to be recorded")
+			elif int(result.get("guild_coin_delta", 0)) != 3:
+				errors.append("Contract result should show +3 coin")
 
 	var fighter_id: int = -1
 	gs.new_run()

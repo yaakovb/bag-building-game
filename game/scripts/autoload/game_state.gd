@@ -48,6 +48,7 @@ var contracts: Array = []
 var resolved_contracts: Array = []
 var offer: Array = []
 var discovered_rewards: Dictionary = {}
+var contract_results: Dictionary = {}
 
 var bag: Bag = Bag.new()
 var needs_retire_first: bool = false
@@ -84,6 +85,7 @@ func new_run() -> void:
 	resolved_contracts.clear()
 	offer.clear()
 	discovered_rewards.clear()
+	contract_results.clear()
 	needs_retire_first = false
 	acquired_this_turn = false
 	extra_basic_offer = false
@@ -269,6 +271,8 @@ func try_resolve_contract(contract_id: String, assignee_ids: Array) -> bool:
 	if not matchup_result.discovered_reward.is_empty():
 		discovered_rewards[contract_id] = matchup_result.discovered_reward
 
+	_record_contract_result(contract_id, assignees, matchup_result)
+
 	resolved_contracts.append(contract_id)
 	_emit_message(
 		"Resolved %s (%+d coin)." % [contract.get("name", ""), matchup_result.guild_coin_delta]
@@ -361,6 +365,7 @@ func _start_turn() -> void:
 	needs_retire_first = roster.size() >= MAX_ROSTER
 	extra_basic_offer = false
 	resolved_contracts.clear()
+	contract_results.clear()
 	assigned_this_turn.clear()
 	contract_failed_this_turn = false
 
@@ -409,6 +414,36 @@ func _check_lose() -> bool:
 
 func _emit_message(text: String) -> void:
 	message_posted.emit(text)
+
+
+func _record_contract_result(
+	contract_id: String,
+	assignees: Array,
+	matchup_result: Dictionary
+) -> void:
+	var assignee_names: PackedStringArray = []
+	var injured_names: PackedStringArray = []
+	var killed_names: PackedStringArray = []
+
+	for adventurer in assignees:
+		var name: String = adventurer_templates[adventurer.template_id].get("name", "")
+		assignee_names.append(name)
+		if matchup_result.injure_instance_ids.has(adventurer.instance_id):
+			injured_names.append(name)
+		if matchup_result.remove_instance_ids.has(adventurer.instance_id):
+			killed_names.append(name)
+
+	contract_results[contract_id] = {
+		"assignees": assignee_names,
+		"guild_coin_delta": int(matchup_result.guild_coin_delta),
+		"injured": injured_names,
+		"killed": killed_names,
+		"reward_label": String(matchup_result.get("discovered_reward", "")),
+	}
+
+
+func get_contract_result(contract_id: String) -> Dictionary:
+	return contract_results.get(contract_id, {})
 
 
 func _load_data() -> void:
