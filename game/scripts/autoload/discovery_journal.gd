@@ -9,11 +9,17 @@ func clear() -> void:
 	_seen_keys.clear()
 
 
+func add_entry(message: String) -> void:
+	if message.is_empty():
+		return
+	_entries.insert(0, message)
+
+
 func log_once(key: String, message: String) -> bool:
-	if _seen_keys.has(key):
+	if key.is_empty() or _seen_keys.has(key):
 		return false
 	_seen_keys[key] = true
-	_entries.append(message)
+	add_entry(message)
 	return true
 
 

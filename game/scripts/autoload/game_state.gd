@@ -16,6 +16,8 @@ enum GameResult {
 
 const MAX_TURNS := 10
 const MAX_ROSTER := 5
+const RETIRE_DRAW_BASE := 4
+const STARTING_TOKENS_PER_TYPE := 2
 const STARTER_IDS := [
 	"starter_fighter",
 	"starter_cleric",
@@ -53,8 +55,11 @@ var contract_results: Dictionary = {}
 var bag: Bag = Bag.new()
 var needs_retire_first: bool = false
 var acquired_this_turn: bool = false
+var retired_this_turn: bool = false
 var extra_basic_offer: bool = false
-var contract_failed_this_turn: bool = false
+var pending_fail_injury: bool = false
+var did_contract_this_turn: bool = false
+var did_guild_action_this_turn: bool = false
 
 var adventurer_templates: Dictionary = {}
 var contract_templates: Dictionary = {}
@@ -67,6 +72,7 @@ signal message_posted(text: String)
 
 
 func _ready() -> void:
+	randomize()
 	_load_data()
 
 
@@ -88,12 +94,16 @@ func new_run() -> void:
 	contract_results.clear()
 	needs_retire_first = false
 	acquired_this_turn = false
+	retired_this_turn = false
 	extra_basic_offer = false
-	contract_failed_this_turn = false
+	pending_fail_injury = false
+	did_contract_this_turn = false
+	did_guild_action_this_turn = false
 
 	bag.clear()
 	for token_type in ActionToken.ALL_TYPES:
-		bag.add_to_bag(token_type, 2)
+		bag.add_to_bag(token_type, STARTING_TOKENS_PER_TYPE)
+	bag.shuffle()
 
 	for starter_id in STARTER_IDS:
 		roster.append(AdventurerInstance.new(starter_id))
@@ -153,8 +163,10 @@ func acquire(template_id: String) -> bool:
 
 	acquired_this_turn = true
 	offer.clear()
-	phase = Phase.RETIRE
-	_emit_message("Hired %s." % template.get("name", template_id))
+	phase = Phase.ACT if retired_this_turn else Phase.RETIRE
+	var hire_name: String = String(template.get("name", template_id))
+	DiscoveryJournal.add_entry("Turn %d — Hired %s." % [turn, hire_name])
+	_emit_message("Hired %s." % hire_name)
 	state_changed.emit()
 	return true
 
@@ -176,24 +188,25 @@ func retire(instance_id: int) -> bool:
 
 	var adventurer := get_adventurer_by_id(instance_id)
 	var template: Dictionary = adventurer_templates[adventurer.template_id]
-	var draw_count := 2 + adventurer.level + int(template.get("retire_bonus", 0))
+	var draw_count := get_retire_draw(adventurer)
 	var drawn: Array = bag.draw(draw_count)
 	drawn_tokens = ActionToken.empty_pool()
 	for token_type in drawn:
 		ActionToken.add_tokens(drawn_tokens, token_type, 1)
 
-	var effect_id: String = template.get("retire_effect_id", "")
+	var effect_id: String = String(template.get("retire_effect_id", ""))
+	var effect_message := ""
 	if not effect_id.is_empty():
-		var effect_message := EffectResolver.apply(effect_id, retire_effects, self)
-		var tag: String = template.get("retire_tag", "")
-		DiscoveryJournal.log_once(
-			"retire_%s" % effect_id,
-			"Retire (%s): %s" % [tag, effect_message]
-		)
+		effect_message = EffectResolver.apply(effect_id, retire_effects, self)
 
 	roster.erase(adventurer)
-	_emit_message("Retired %s. Drew %d tokens." % [template.get("name", ""), drawn.size()])
+	var summary := "Retired %s. Drew %d tokens." % [template.get("name", ""), drawn.size()]
+	if not effect_message.is_empty():
+		summary += " %s" % effect_message
+	DiscoveryJournal.add_entry("Turn %d — %s" % [turn, summary])
+	_emit_message(summary)
 
+	retired_this_turn = true
 	if needs_retire_first and not acquired_this_turn:
 		needs_retire_first = false
 		phase = Phase.ACQUIRE
@@ -201,26 +214,38 @@ func retire(instance_id: int) -> bool:
 		phase = Phase.ACT
 
 	state_changed.emit()
+	_check_lose()
 	return true
+
+
+func get_retire_draw(adventurer: AdventurerInstance) -> int:
+	var template: Dictionary = adventurer_templates[adventurer.template_id]
+	return RETIRE_DRAW_BASE + adventurer.level + int(template.get("retire_bonus", 0))
 
 
 func can_resolve_contract(contract_id: String) -> bool:
 	if phase != Phase.ACT:
+		return false
+	if did_contract_this_turn:
 		return false
 	if resolved_contracts.has(contract_id):
 		return false
 	return contracts.has(contract_id)
 
 
-func try_resolve_contract(contract_id: String, assignee_ids: Array) -> bool:
+func try_resolve_contract(contract_id: String, assignee_ids: Array, extra_tokens: Variant = null) -> bool:
+	if did_contract_this_turn:
+		_emit_message("You already completed a contract this round.")
+		return false
 	if not can_resolve_contract(contract_id):
 		return false
 
+	var extras: Dictionary = extra_tokens if extra_tokens is Dictionary else ActionToken.empty_pool()
 	var contract: Dictionary = contract_templates[contract_id]
 	var min_send: int = int(contract.get("min_adventurers", 1))
 	var max_send: int = int(contract.get("max_adventurers", 1))
 	if assignee_ids.size() < min_send or assignee_ids.size() > max_send:
-		_emit_message("Select %d-%d adventurers." % [min_send, max_send])
+		_emit_message("Send %d–%d adventurers." % [min_send, max_send])
 		return false
 
 	var assignees: Array = []
@@ -235,58 +260,126 @@ func try_resolve_contract(contract_id: String, assignee_ids: Array) -> bool:
 		assignees.append(adventurer)
 
 	var costs: Dictionary = ActionToken.parse_cost_map(contract.get("token_cost", {}))
-	if not ActionToken.can_pay(drawn_tokens, costs):
+	var payment: Dictionary = ActionToken.combined_pool(costs, extras)
+	if not ActionToken.can_pay(drawn_tokens, payment):
 		_emit_message("Not enough drawn tokens for this contract.")
 		return false
 
-	ActionToken.pay(drawn_tokens, costs)
+	ActionToken.pay(drawn_tokens, payment)
 	for instance_id in assignee_ids:
 		assigned_this_turn.append(instance_id)
 
-	var matchup_result: Dictionary = MatchupResolver.resolve(
+	var need: Dictionary = ActionToken.parse_cost_map(contract.get("success_need", {}))
+	var power: Dictionary = MatchupResolver.combined_power(assignees, adventurer_templates, payment)
+	var forced_success := MatchupResolver.forces_success(
 		contract_id,
 		assignees,
 		matchup_rows,
 		adventurer_templates
 	)
+	var success := forced_success or MatchupResolver.meets_need(power, need)
+	var coin_delta: int = int(contract.get("base_reward", 0)) if success else 0
 
-	guild_coin += matchup_result.guild_coin_delta
-	if matchup_result.guild_coin_delta <= 0:
-		contract_failed_this_turn = true
+	var matchup_result: Dictionary = MatchupResolver.resolve(
+		contract_id,
+		assignees,
+		matchup_rows,
+		adventurer_templates,
+		success
+	)
+	coin_delta += int(matchup_result.guild_coin_delta)
+	guild_coin += coin_delta
+
+	if not success:
+		if matchup_result.injure_instance_ids.is_empty() and matchup_result.remove_instance_ids.is_empty():
+			for adventurer in assignees:
+				matchup_result.injure_instance_ids.append(adventurer.instance_id)
 
 	for instance_id in matchup_result.injure_instance_ids:
-		var adventurer := get_adventurer_by_id(instance_id)
-		if adventurer != null:
-			adventurer.injury_state = AdventurerInstance.InjuryState.INJURED
+		var injured := get_adventurer_by_id(instance_id)
+		if injured != null and not matchup_result.remove_instance_ids.has(instance_id):
+			injured.injury_state = AdventurerInstance.InjuryState.INJURED
 
 	for instance_id in matchup_result.remove_instance_ids:
-		var adventurer := get_adventurer_by_id(instance_id)
-		if adventurer != null:
-			roster.erase(adventurer)
-			_emit_message("%s died on the contract." % adventurer_templates[adventurer.template_id].get("name", ""))
+		var fallen := get_adventurer_by_id(instance_id)
+		if fallen != null:
+			roster.erase(fallen)
+			_emit_message("%s died on the contract." % adventurer_templates[fallen.template_id].get("name", ""))
+
+	for instance_id in matchup_result.heal_instance_ids:
+		var healed := get_adventurer_by_id(instance_id)
+		if healed != null:
+			healed.injury_state = AdventurerInstance.InjuryState.HEALTHY
+
+	var lingering_victim := ""
+	if not success and pending_fail_injury:
+		lingering_victim = _apply_pending_fail_injury(matchup_result.remove_instance_ids)
+		pending_fail_injury = false
+
+	var dead_names: PackedStringArray = PackedStringArray()
+	for instance_id in matchup_result.remove_instance_ids:
+		for adventurer in assignees:
+			if adventurer.instance_id == instance_id:
+				dead_names.append(String(adventurer_templates[adventurer.template_id].get("name", "")))
+				break
+	# Assignees must be healthy to be sent, so any injury here came from this contract.
+	var injured_names: PackedStringArray = PackedStringArray()
+	for adventurer in assignees:
+		if matchup_result.remove_instance_ids.has(adventurer.instance_id):
+			continue
+		if adventurer.is_injured():
+			injured_names.append(String(adventurer_templates[adventurer.template_id].get("name", "")))
+	if not lingering_victim.is_empty() and not injured_names.has(lingering_victim):
+		injured_names.append(lingering_victim)
+
+	DiscoveryJournal.add_entry(MatchupResolver.adventure_log(
+		turn,
+		contract,
+		assignees,
+		adventurer_templates,
+		success,
+		forced_success,
+		power,
+		need,
+		extras,
+		dead_names,
+		injured_names,
+		matchup_result.stories
+	))
 
 	for entry in matchup_result.journal_entries:
-		DiscoveryJournal.log_once(entry.key, entry.message)
+		DiscoveryJournal.log_once(entry.key, "Learned: %s" % entry.message)
 
-	if not matchup_result.discovered_reward.is_empty():
+	if success:
+		var reward_text: String = String(matchup_result.discovered_reward)
+		if reward_text.is_empty():
+			reward_text = "Success"
+		discovered_rewards[contract_id] = reward_text
+	elif not matchup_result.discovered_reward.is_empty():
 		discovered_rewards[contract_id] = matchup_result.discovered_reward
 
-	_record_contract_result(contract_id, assignees, matchup_result)
+	_record_contract_result(contract_id, assignees, matchup_result, coin_delta)
 
 	resolved_contracts.append(contract_id)
-	_emit_message(
-		"Resolved %s (%+d coin)." % [contract.get("name", ""), matchup_result.guild_coin_delta]
-	)
+	did_contract_this_turn = true
+	if success:
+		_emit_message("Success on %s (%+d coin)." % [contract.get("name", ""), coin_delta])
+	else:
+		_emit_message("Failed %s (%+d coin)." % [contract.get("name", ""), coin_delta])
 	state_changed.emit()
 	_check_lose()
 	return true
 
-
 func can_perform_guild_action(action_id: String) -> bool:
-	return phase == Phase.ACT and guild_action_templates.has(action_id)
+	if phase != Phase.ACT or did_guild_action_this_turn:
+		return false
+	return guild_action_templates.has(action_id)
 
 
 func try_guild_action(action_id: String, assignee_ids: Array) -> bool:
+	if did_guild_action_this_turn:
+		_emit_message("You already used a guild facility this round.")
+		return false
 	if not can_perform_guild_action(action_id):
 		return false
 
@@ -319,26 +412,54 @@ func try_guild_action(action_id: String, assignee_ids: Array) -> bool:
 
 	ActionToken.pay(drawn_tokens, costs)
 	assigned_this_turn.append(instance_id)
+	did_guild_action_this_turn = true
 
 	match action_id:
 		"action_rest":
 			if randf() < 0.7:
 				adventurer.injury_state = AdventurerInstance.InjuryState.HEALTHY
-				_emit_message("%s recovered." % adventurer_templates[adventurer.template_id].get("name", ""))
+				var recovered := "%s recovered at the hall." % adventurer_templates[adventurer.template_id].get("name", "")
+				DiscoveryJournal.add_entry("Turn %d — %s" % [turn, recovered])
+				_emit_message(recovered)
 			else:
+				var rest_fail := "%s rested, but the injury lingered." % adventurer_templates[adventurer.template_id].get("name", "")
+				DiscoveryJournal.add_entry("Turn %d — %s" % [turn, rest_fail])
 				_emit_message("Rest failed — still injured.")
 		"action_train":
 			if randf() < 0.7:
 				if adventurer.level < 3:
 					adventurer.level += 1
-				_emit_message("%s trained to level %d." % [
+				var trained := "%s trained to level %d." % [
 					adventurer_templates[adventurer.template_id].get("name", ""),
 					adventurer.level,
-				])
+				]
+				DiscoveryJournal.add_entry("Turn %d — %s" % [turn, trained])
+				_emit_message(trained)
 			else:
 				adventurer.injury_state = AdventurerInstance.InjuryState.INJURED
+				var accident := "Training accident — %s was injured." % adventurer_templates[adventurer.template_id].get("name", "")
+				DiscoveryJournal.add_entry("Turn %d — %s" % [turn, accident])
 				_emit_message("Training accident — adventurer injured.")
 
+	state_changed.emit()
+	return true
+
+
+func convert_tokens(payment: Dictionary, to_type: int) -> bool:
+	if phase != Phase.ACT:
+		return false
+	if not (to_type in ActionToken.ALL_TYPES):
+		return false
+	if not ActionToken.is_valid_conversion(payment):
+		_emit_message("Change 2 matching tokens, or any 3, into 1.")
+		return false
+	if not ActionToken.can_pay(drawn_tokens, payment):
+		_emit_message("Not enough tokens to change.")
+		return false
+
+	ActionToken.pay(drawn_tokens, payment)
+	ActionToken.add_tokens(drawn_tokens, to_type, 1)
+	_emit_message("Changed tokens into %s." % ActionToken.NAMES[to_type])
 	state_changed.emit()
 	return true
 
@@ -349,7 +470,6 @@ func end_turn() -> void:
 
 	drawn_tokens = ActionToken.empty_pool()
 	assigned_this_turn.clear()
-	contract_failed_this_turn = false
 
 	if _check_lose():
 		return
@@ -362,12 +482,14 @@ func end_turn() -> void:
 func _start_turn() -> void:
 	turn += 1
 	acquired_this_turn = false
+	retired_this_turn = false
 	needs_retire_first = roster.size() >= MAX_ROSTER
-	extra_basic_offer = false
 	resolved_contracts.clear()
 	contract_results.clear()
 	assigned_this_turn.clear()
-	contract_failed_this_turn = false
+	pending_fail_injury = false
+	did_contract_this_turn = false
+	did_guild_action_this_turn = false
 
 	_refresh_contracts()
 	offer = OfferGenerator.generate_offer(
@@ -375,6 +497,7 @@ func _start_turn() -> void:
 		RECRUIT_IDS,
 		extra_basic_offer
 	)
+	extra_basic_offer = false
 
 	if needs_retire_first:
 		phase = Phase.RETIRE
@@ -412,6 +535,27 @@ func _check_lose() -> bool:
 	return false
 
 
+func _apply_pending_fail_injury(excluded_ids: Array) -> String:
+	var candidates: Array = []
+	for adventurer in roster:
+		if excluded_ids.has(adventurer.instance_id):
+			continue
+		if adventurer.is_injured():
+			continue
+		candidates.append(adventurer)
+	if candidates.is_empty():
+		return ""
+	var victim: AdventurerInstance = candidates[randi() % candidates.size()]
+	victim.injury_state = AdventurerInstance.InjuryState.INJURED
+	var victim_name: String = String(adventurer_templates[victim.template_id].get("name", ""))
+	DiscoveryJournal.log_once(
+		"retire_risk_fail",
+		"Learned: a lingering retire risk can injure someone after a failed contract."
+	)
+	_emit_message("%s was hurt by lingering retire risk." % victim_name)
+	return victim_name
+
+
 func _emit_message(text: String) -> void:
 	message_posted.emit(text)
 
@@ -419,7 +563,8 @@ func _emit_message(text: String) -> void:
 func _record_contract_result(
 	contract_id: String,
 	assignees: Array,
-	matchup_result: Dictionary
+	matchup_result: Dictionary,
+	coin_delta: int
 ) -> void:
 	var assignee_names: PackedStringArray = []
 	var injured_names: PackedStringArray = []
@@ -435,7 +580,7 @@ func _record_contract_result(
 
 	contract_results[contract_id] = {
 		"assignees": assignee_names,
-		"guild_coin_delta": int(matchup_result.guild_coin_delta),
+		"guild_coin_delta": coin_delta,
 		"injured": injured_names,
 		"killed": killed_names,
 		"reward_label": String(matchup_result.get("discovered_reward", "")),

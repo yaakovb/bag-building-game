@@ -20,6 +20,7 @@
   },
   "risk_draw_injury": {
     "type": "draw_extra_token",
-    "message": "Drew an extra token, but risk lingers."
+    "pending_fail_injury": true,
+    "message": "Drew an extra token. If a contract fails this round, someone may be hurt."
   }
 }

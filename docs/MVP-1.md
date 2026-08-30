@@ -6,8 +6,9 @@ MVP 1 validates the **core turn loop** in Godot with the correct conceptual mode
 
 - **Cards = adventurers only**
 - **Tokens = action types** (the five attributes)
-- **Contracts rotate each turn** and require **tokens + assigned adventurers**
-- **Outcomes are partial** — hints on the contract; full matchup results discovered through play
+- **Contracts rotate each turn** and require **minimum tokens + minimum heroes**, with optional extras
+- **Success totals are hidden**: spent tokens + hero attributes are compared behind the scenes
+- **Outcomes are partial** — class bonuses and fail injuries stay hidden until discovered
 
 Placeholder art, no meta-progression, minimal content. If assigning the wrong hero to a contract doesn't feel tense by turn 5, fix the loop before expanding content.
 
@@ -17,7 +18,7 @@ Placeholder art, no meta-progression, minimal content. If assigning the wrong he
 
 ## Player experience (MVP 1)
 
-You inherit a guild with three green adventurers. Each turn new heroes appear for hire (basics free, better ones cost guild coin). You retire one veteran to draw action tokens from the bag — Attack, Defense, Magic, Support, Leadership. You spend those tokens and pick who goes on this week's contracts. The crypt contract says it needs Attack and Magic; a note mentions holy specialists. You send the cleric and hope. The fighter sits out — or you risk him and learn why that was a mistake.
+You inherit a guild with three green adventurers. Each turn new heroes appear for hire (basics free, better ones cost guild coin). You retire one veteran to draw action tokens from the bag — Attack, Defense, Magic, Support, Leadership. Drag tokens onto a contract to pay the **required** fee and send at least one hero. Extra tokens and a second hero are optional and may help, but the exact success bar stays hidden. A fighter might need an extra Magic token for the crypt; a fighter plus a mage might make it on attributes. A cleric has a hidden edge.
 
 ## Scope
 
@@ -31,11 +32,11 @@ You inherit a guild with three green adventurers. Each turn new heroes appear fo
 | **Starting roster** | 3 basic adventurers at run start |
 | Action tokens | 5 types: Attack, Defense, Magic, Support, Leadership |
 | Acquire offer | 3 adventurers per turn: 1 free basic + 2 priced |
-| Retire | Draw `2 + level + bonus`; hidden retire guild effect |
-| **Contracts board** | 2 contracts refreshed each turn |
-| **Guild actions** | 2 fixed actions (Rest, Train) |
-| **Act phase** | Pay tokens + assign adventurers; resolve outcomes |
-| Partial outcomes | Hints on contracts; hidden matchup table |
+| Retire | Draw `4 + level + bonus`; hidden retire guild effect |
+| **Contracts board** | 2 contracts refreshed each turn; **one contract per round** |
+| **Guild actions** | 2 fixed actions (Rest, Train); **one facility per round** |
+| **Act phase** | Pay required tokens, send min heroes, optionally add extras; resolve success/fail |
+| Partial outcomes | Success totals hidden; class bonuses and fail injuries hidden |
 | Injury | 2 tiers: Injured, Grave (MVP death = removed from roster) |
 | Discovery journal | In-run log of first-time matchup and retire reveals |
 | Guild coin | Separate from bag — pays acquire costs only |
@@ -50,6 +51,7 @@ You inherit a guild with three green adventurers. Each turn new heroes appear fo
 - Equipment
 - Meta-progression between runs
 - Scout / reveal guild action
+- Full hidden outcome table (defense-gated injury/death, support unlocking a new contract)
 - More than 2 contract slots or 2 guild actions
 - Save/load
 - Audio, polished art
@@ -80,7 +82,7 @@ You inherit a guild with three green adventurers. Each turn new heroes appear fo
 ### Phase 2 — Retire
 
 - Player selects **one** roster adventurer to retire.
-- **Draw:** `2 + level + retire_bonus` tokens from bag. Shuffle discard into bag if empty mid-draw.
+- **Draw:** `4 + level + retire_bonus` tokens from bag. Shuffle discard into bag if empty mid-draw.
 - **Retire effect:** Resolve hidden guild effect; log to journal if new.
 - **Remove** adventurer permanently.
 
@@ -88,26 +90,40 @@ You inherit a guild with three green adventurers. Each turn new heroes appear fo
 
 ### Phase 3 — Act
 
-Player spends **drawn tokens** (this turn only) on **contracts** and/or **guild actions**. Each activity:
+Player spends **drawn tokens** (this turn only) on **one contract** and/or **one guild facility**. Each contract:
 
-1. Pay listed **action token** costs from drawn pool.
-2. Assign **required adventurers** from roster (not injured unless action allows).
-3. Resolve — apply visible + hidden outcomes.
+1. Pay listed **required tokens** from the drawn pool.
+2. Assign at least the **minimum heroes** (1 or 2). Extra heroes up to the listed max are optional.
+3. Optionally drag **extra tokens** onto the contract. They may help; the success bar stays hidden.
+4. Resolve **success or fail**, then any hidden matchup.
 
-- Player may perform **multiple activities** if tokens and adventurers allow.
 - **Unspent drawn tokens** are lost at end of turn.
 - Same adventurer **cannot** be assigned to two activities in one turn.
+- Token conversion: **2 matching → 1** of a chosen type, or **any 3 → 1**.
 
-#### Contracts (2 per turn)
+#### Contracts (2 shown, 1 resolvable per round)
 
-See contract table below. Each shows:
+Each contract shows:
 
-- Token cost (visible)
-- Adventurer count (visible)
-- **Hint line** (partial outcome)
-- **Risk tag** if injury possible (partial)
+- **Required tokens** (must pay to attempt)
+- **Required heroes** (1 or 2) and optional extra hero slots
+- Hint line and risk tag
+- Reward still hidden until discovered
+
+Drag drawn tokens onto the contract to pay. Extra tokens beyond the requirement may help; the exact success total stays hidden.
+
+Success formula (hidden from the player):
+
+```
+power[type] = required_tokens[type] + extra_tokens[type] + sum(hero.attributes[type])
+success if power[type] >= success_need[type] for every listed type
+```
+
+Example — Clear Undead Crypt: required 2 Attack + 1 Magic to attempt. Succeeds at 3 Attack + 2 Magic (hidden). A fighter (Attack 2) plus one extra Magic token succeeds. A fighter plus a mage can succeed on attributes without extras.
 
 #### Guild actions (always available)
+
+Drag drawn tokens onto the facility to pay, then assign one hero.
 
 | Action | Token cost | Assign | Visible result | Hidden |
 |--------|------------|--------|----------------|--------|
@@ -170,43 +186,39 @@ Attribute blocks for recruits defined in data files (not all listed here — imp
 
 ## Contracts (MVP 1)
 
-Four definitions in pool; 2 shown per turn.
+Four definitions in pool; 2 shown per turn; **one** may be resolved.
 
-| ID | Name | Token cost | Send | Hint (partial) | Risk tag |
-|----|------|------------|------|----------------|----------|
-| `contract_undead` | Clear Undead Crypt | 2 Attack, 1 Magic | 1–2 | "Holy specialists thrive against undead" | High |
-| `contract_escort` | Escort Merchant | 1 Defense, 1 Leadership | 1–2 | "A steady blade and a calm voice" | Low |
-| `contract_bandits` | Drive Off Bandits | 2 Attack | 1–3 | "Sheer force works — but someone may get hurt" | Medium |
-| `contract_ritual` | Disrupt Dark Ritual | 2 Magic, 1 Support | 1–2 | "Without support, the party unravels" | Medium |
+| ID | Name | Required tokens | Heroes | Hidden success total | Base reward | Hint | Risk |
+|----|------|-----------------|--------|---------------|-------------|------|------|
+| `contract_undead` | Clear Undead Crypt | 2 Attack, 1 Magic | 1 required, +1 optional | 3 Attack, 2 Magic | 2 | "Holy specialists thrive against undead" | High |
+| `contract_escort` | Escort Merchant | 1 Defense, 1 Leadership | 1 required, +1 optional | 2 Defense, 2 Leadership | 2 | "A steady blade and a calm voice" | Low |
+| `contract_bandits` | Drive Off Bandits | 2 Attack | 1 required, +1 optional | 4 Attack | 2 | "Sheer force works — but someone may get hurt" | Medium |
+| `contract_ritual` | Disrupt Dark Ritual | 1 Magic, 1 Support | 1 required, +1 optional | 3 Magic, 2 Support | 3 | "Without support, the party unravels" | Medium |
+
+Failing a contract injures the party unless a more specific hidden row applies.
 
 ### Hidden matchup outcomes (MVP 1)
 
-Logged to journal on first trigger.
+Logged to journal on first trigger. **Not** in MVP 1: defense-gated injury/death, support unlocking a new contract.
 
-| Contract | Condition (assigned adventurer) | Outcome |
-|----------|----------------------------------|---------|
-| **Undead Crypt** | Cleric assigned | +3 guild coin, hint revealed |
-| **Undead Crypt** | Fighter assigned (no Cleric) | Fighter → **Grave injury** (death in MVP 1) |
-| **Undead Crypt** | Ranger only | +1 guild coin, Ranger injured |
-| **Escort Merchant** | Leadership ≥ 1 on any assignee | +2 guild coin |
-| **Escort Merchant** | No Defense token spent... | (cost already requires Defense — mismatch if injured Def hero sent) |
-| **Bandits** | Attack ≥ 2 on any assignee | +3 guild coin |
-| **Bandits** | Any assignee Attack 0 | Assignee injured |
-| **Dark Ritual** | Mage or Cleric + Support ≥ 1 | +4 guild coin |
-| **Dark Ritual** | No Support in party | All assignees injured |
-
-MVP 1 implements **at least 6 distinct matchup rows** across the four contracts; Undead + Cleric/Fighter is the **tutorial teach moment**.
+| Contract | Condition | Outcome |
+|----------|-----------|---------|
+| **Undead Crypt** | Cleric assigned | **Always succeeds**, +2 extra guild coin |
+| **Undead Crypt** | Failed, Fighter assigned | Fighter dies |
+| **Dark Ritual** | Success + Cleric assigned | +1 extra guild coin |
 
 ### Visible vs hidden on contract card UI
 
 ```
 ┌─────────────────────────────────────┐
 │  CLEAR UNDEAD CRYPT                 │
-│  Cost: ⚔×2  ✦×1                     │
-│  Send: 1–2 adventurers              │
+│  Heroes: 1 required · 1 optional    │
+│  Required tokens: ⚔️⚔️  🔮          │
+│  Drop tokens here                   │
+│  Extra tokens may help (hidden bar) │
 │  "Holy specialists thrive..."       │
-│  Risk: HIGH                         │
-│  Reward: ???                        │  ← hidden until discovered or resolved
+│  Risk: HIGH     Reward: ???         │
+│  [ Send party ]                     │
 └─────────────────────────────────────┘
 ```
 
@@ -261,7 +273,7 @@ Tag visible on adventurer card. Six effects in data:
 └────────────────────────────────────────────────────────────────────┘
 ```
 
-Flow note: Retire button opens picker; Act phase uses drag-or-click assign then confirm per contract/action.
+Flow note: Retire by clicking a roster card. Act phase: drag tokens onto a contract or guild facility, click heroes to assign, then confirm.
 
 ## Godot architecture (MVP 1)
 
@@ -325,11 +337,13 @@ INIT → [ROSTER_FULL ? RETIRE : ACQUIRE] → RETIRE → ACT → END_TURN → ..
 - [ ] All cards are adventurers — no non-hero card type exists
 - [ ] Five action token types; no "gold/supply" resource tokens in bag
 - [ ] Acquire adds correct tokens to discard; priced hires cost guild coin
-- [ ] Retire draws `2 + level + bonus`; shuffle-when-empty works
-- [ ] 2 contracts refresh each turn
-- [ ] Contract resolution requires token payment + adventurer assignment
-- [ ] Undead Crypt: Cleric → bonus coin; Fighter alone → severe outcome (death/injury)
-- [ ] Rest and Train guild actions work with token + assign rules
+- [ ] Retire draws `4 + level + bonus`; shuffle-when-empty works
+- [ ] 2 contracts refresh each turn; only one may be resolved per round
+- [ ] Contract attempt requires required tokens + minimum heroes
+- [ ] Optional extra tokens (drag onto the contract) and extra heroes count toward success
+- [ ] Success = tokens spent + hero attributes ≥ hidden success totals
+- [ ] Undead Crypt: Cleric always succeeds with extra coin; failed fighter dies
+- [ ] Rest and Train guild actions work; one facility per round
 - [ ] Partial hints visible on contracts; full matchup logs to journal once
 - [ ] Win and lose screens trigger correctly
 - [ ] All content driven from data files
@@ -348,7 +362,7 @@ INIT → [ROSTER_FULL ? RETIRE : ACQUIRE] → RETIRE → ACT → END_TURN → ..
 | 1 | Grave injury = death in MVP 1? | **Yes** — simpler; injury tiers expand in MVP 2 |
 | 2 | Guild coin name in UI? | **Guild coin** (flavor: paying recruits, contract fees) |
 | 3 | Show attribute numbers on card faces? | **Yes** — inputs stay clear |
-| 4 | Multiple contracts per turn? | **Yes**, if tokens and heroes allow |
+| 4 | Multiple contracts per turn? | **No** — one contract and one guild facility per round |
 | 5 | Data format | **JSON** |
 
 ## Implementation order

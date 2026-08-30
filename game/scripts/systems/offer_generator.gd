@@ -21,22 +21,19 @@ static func generate_offer(
 	var offer: Array = []
 	if not basics.is_empty():
 		offer.append(basics[0])
-	if extra_basic and basics.size() > 1:
-		offer.append(basics[1])
-	while offer.size() < 1 and not basics.is_empty():
-		offer.append(basics[0])
 
 	while offer.size() < 3 and not priced.is_empty():
 		offer.append(priced.pop_back())
-
-	if extra_basic and not basics.is_empty() and offer.size() < 4:
-		var extra: String = basics[1 % basics.size()]
-		if not offer.has(extra):
-			offer.append(extra)
 
 	while offer.size() < 3 and not basics.is_empty():
 		var pick: String = basics[randi() % basics.size()]
 		if not offer.has(pick):
 			offer.append(pick)
+
+	if extra_basic:
+		for basic_id in basics:
+			if not offer.has(basic_id):
+				offer.append(basic_id)
+				break
 
 	return offer

@@ -22,8 +22,8 @@ Design and development docs for a fantasy guild-management bag-builder built in 
 |---------|---------|
 | **Card** | Always an adventurer (never a generic guild asset) |
 | **Token** | Action type = attribute: Attack, Defense, Magic, Support, Leadership |
-| **Contract** | Guild-board opportunity each turn; costs tokens + assigned heroes |
-| **Input** | Costs, attributes, who can be sent — always visible |
+| **Contract** | Guild-board job: required tokens + min heroes; optional extras; success if tokens + attributes meet a hidden total |
+| **Input** | Required tokens, attributes, who can be sent — always visible; success totals hidden |
 | **Output** | Rewards, injuries, bonuses — partial hints; full detail via discovery |
 
 ## Status

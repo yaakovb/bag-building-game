@@ -32,6 +32,10 @@ func add_contribution(contribution: Dictionary) -> void:
 		add_to_discard(token_type, contribution[token_type])
 
 
+func shuffle() -> void:
+	_bag.shuffle()
+
+
 func shuffle_discard_into_bag() -> void:
 	if _discard.is_empty():
 		return
@@ -47,7 +51,9 @@ func draw(count: int) -> Array:
 			shuffle_discard_into_bag()
 		if _bag.is_empty():
 			break
-		drawn.append(_bag.pop_back())
+		var index: int = randi() % _bag.size()
+		drawn.append(_bag[index])
+		_bag.remove_at(index)
 	return drawn
 
 
