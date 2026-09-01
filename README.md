@@ -12,9 +12,25 @@ Design docs and milestone specs live in [`docs/`](docs/README.md):
 
 ## Status
 
-**MVP 1 — Core Loop** — planning complete, implementation not started.
+**MVP 1 — Core Loop** — implementation in progress (Godot project in `game/`).
 
 ## Tech
 
-- Godot 4.x
+- Godot 4.3
 - Desktop (Windows / Linux / macOS)
+
+## Run locally
+
+```bash
+cd game
+godot --path . res://scenes/main.tscn
+```
+
+Or open `game/project.godot` in the Godot 4 editor and press Play.
+
+### Headless tests
+
+```bash
+cd game
+godot --headless --path . -s res://scripts/test_runner.gd
+```

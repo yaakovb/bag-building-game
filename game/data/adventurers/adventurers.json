@@ -1,0 +1,110 @@
+{
+  "starter_fighter": {
+	"id": "starter_fighter",
+	"name": "Tomás",
+	"class": "Fighter",
+	"tier": 0,
+	"cost": 0,
+	"attributes": { "attack": 2, "defense": 1, "magic": 0, "support": 0, "leadership": 0 },
+	"bag_contribution": { "attack": 2 },
+	"retire_bonus": 0,
+	"retire_tag": "Morale",
+	"retire_effect_id": "morale_lose_coin"
+  },
+  "starter_cleric": {
+	"id": "starter_cleric",
+	"name": "Sister Maren",
+	"class": "Cleric",
+	"tier": 0,
+	"cost": 0,
+	"attributes": { "attack": 0, "defense": 1, "magic": 2, "support": 1, "leadership": 0 },
+	"bag_contribution": { "magic": 1, "support": 1 },
+	"retire_bonus": 0,
+	"retire_tag": "Morale",
+	"retire_effect_id": "morale_extra_basic"
+  },
+  "starter_ranger": {
+	"id": "starter_ranger",
+	"name": "Edda",
+	"class": "Ranger",
+	"tier": 0,
+	"cost": 0,
+	"attributes": { "attack": 1, "defense": 1, "magic": 0, "support": 1, "leadership": 1 },
+	"bag_contribution": { "attack": 1, "leadership": 1 },
+	"retire_bonus": 0,
+	"retire_tag": "Morale",
+	"retire_effect_id": "morale_lose_coin"
+  },
+  "recruit_squire": {
+	"id": "recruit_squire",
+	"name": "Young Squire",
+	"class": "Fighter",
+	"tier": 0,
+	"cost": 0,
+	"attributes": { "attack": 1, "defense": 1, "magic": 0, "support": 0, "leadership": 0 },
+	"bag_contribution": { "attack": 2 },
+	"retire_bonus": 0,
+	"retire_tag": "Morale",
+	"retire_effect_id": "morale_extra_basic"
+  },
+  "recruit_acolyte": {
+	"id": "recruit_acolyte",
+	"name": "Acolyte",
+	"class": "Cleric",
+	"tier": 0,
+	"cost": 0,
+	"attributes": { "attack": 0, "defense": 1, "magic": 2, "support": 1, "leadership": 0 },
+	"bag_contribution": { "magic": 1, "support": 1 },
+	"retire_bonus": 0,
+	"retire_tag": "Morale",
+	"retire_effect_id": "morale_lose_coin"
+  },
+  "recruit_bard": {
+	"id": "recruit_bard",
+	"name": "Tavern Bard",
+	"class": "Bard",
+	"tier": 1,
+	"cost": 2,
+	"attributes": { "attack": 0, "defense": 0, "magic": 1, "support": 2, "leadership": 1 },
+	"bag_contribution": { "support": 1, "leadership": 1 },
+	"retire_bonus": 0,
+	"retire_tag": "Morale",
+	"retire_effect_id": "morale_extra_basic"
+  },
+  "recruit_knight": {
+	"id": "recruit_knight",
+	"name": "Hedge Knight",
+	"class": "Fighter",
+	"tier": 1,
+	"cost": 3,
+	"attributes": { "attack": 2, "defense": 2, "magic": 0, "support": 0, "leadership": 0 },
+	"bag_contribution": { "attack": 2, "defense": 1 },
+	"retire_bonus": 1,
+	"retire_tag": "Treasury",
+	"retire_effect_id": "treasury_gain_two"
+  },
+  "recruit_mage": {
+	"id": "recruit_mage",
+	"name": "Hedge Mage",
+	"class": "Mage",
+	"tier": 2,
+	"cost": 4,
+	"attributes": { "attack": 0, "defense": 0, "magic": 3, "support": 0, "leadership": 0 },
+	"bag_contribution": { "magic": 2 },
+	"retire_bonus": 1,
+	"retire_tag": "Risk",
+	"retire_effect_id": "risk_draw_injury"
+  },
+  "recruit_captain": {
+	"id": "recruit_captain",
+	"name": "Retired Captain",
+	"class": "Leader",
+	"tier": 2,
+	"cost": 5,
+	"attributes": { "attack": 1, "defense": 1, "magic": 0, "support": 0, "leadership": 3 },
+	"bag_contribution": { "leadership": 2, "defense": 1 },
+	"retire_bonus": 0,
+	"retire_tag": "Treasury",
+	"retire_effect_id": "treasury_gain_one"
+  }
+}

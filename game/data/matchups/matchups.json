@@ -1,0 +1,44 @@
+[
+  {
+    "contract_id": "contract_undead",
+    "priority": 100,
+    "on": "always",
+    "conditions": { "has_class": "Cleric" },
+    "outcomes": {
+      "force_success": true,
+      "guild_coin": 2,
+      "discovered_reward": "Cleric blessing (discovered)",
+      "journal_message": "Undead Crypt + Cleric → always succeeds, extra gold",
+      "story": "Holy rites turned the dead aside. Faith, not the listed fee, decided this job."
+    },
+    "journal_key": "undead_cleric",
+    "stop_after_match": true
+  },
+  {
+    "contract_id": "contract_undead",
+    "priority": 90,
+    "on": "fail",
+    "conditions": { "has_class": "Fighter" },
+    "outcomes": {
+      "grave_injury_class": "Fighter",
+      "journal_message": "Undead Crypt failed + Fighter → fighter died",
+      "story": "A fighter's charge into the crypt is a death sentence. The dead do not yield to steel alone."
+    },
+    "journal_key": "undead_fighter",
+    "stop_after_match": true
+  },
+  {
+    "contract_id": "contract_ritual",
+    "priority": 80,
+    "on": "success",
+    "conditions": { "has_class": "Cleric" },
+    "outcomes": {
+      "guild_coin": 1,
+      "discovered_reward": "Holy disruption (discovered)",
+      "journal_message": "Dark Ritual + Cleric → extra gold on success",
+      "story": "Holy hands unpicked the rite. The extra coin is a quiet thanks."
+    },
+    "journal_key": "ritual_cleric",
+    "stop_after_match": true
+  }
+]

@@ -15,7 +15,7 @@ You run a struggling fantasy adventurers' guild. Every card is an **adventurer**
 
 1. **Cards are adventurers** — There is no separate "guild asset" card type. Every card is a hero with race, class, attributes, and a personal bag contribution.
 2. **Tokens are actions, not resources** — Bag tokens represent action types aligned with hero attributes: **Attack, Defense, Magic, Support, Leadership**. They are spent to perform guild activities, not traded as abstract gold or supplies.
-3. **Clear inputs, partial outputs** — Contract and guild-action costs, required tokens, and adventurer assignment rules are fully visible. Rewards, injuries, deaths, and bonus synergies are hidden or hinted until discovered.
+3. **Clear inputs, partial outputs** — Contract and guild-action costs, required tokens, and adventurer assignment rules are fully visible. Success totals, rewards, injuries, deaths, and bonus synergies are hidden or hinted until discovered.
 4. **Retire is the heartbeat** — Retiring an adventurer pulls action tokens from the bag and triggers retire effects on the guild. It is the main way to fuel the turn.
 5. **Classical bag builder** — New adventurers add tokens to the discard pile. The bag draws when retiring; empty bag shuffles discard in. Dilution and composition matter.
 6. **Exploration through play** — A discovery journal records what the guild has learned about contracts, matchups, and retire outcomes across runs.
@@ -85,7 +85,7 @@ Every card is an adventurer. There are no non-hero card types.
 ### Retire formula
 
 ```
-tokens_drawn = 2 + retired_adventurer.level + retired_adventurer.retire_bonus
+tokens_drawn = 4 + retired_adventurer.level + retired_adventurer.retire_bonus
 ```
 
 ### Guild: contracts
@@ -95,21 +95,26 @@ Contracts are **not cards**. They are guild-board opportunities that **refresh e
 | Element | Visibility |
 |---------|------------|
 | Contract name & flavor | Visible |
-| Token cost (action types and amounts) | Visible |
-| Min/max adventurers required | Visible |
+| Required tokens (to attempt) | Visible |
+| Required heroes (1 or 2) and optional extra slots | Visible |
+| Success totals (tokens + attributes needed) | Hidden |
+| Optional extra tokens the player may add | Visible to spend; effect hidden |
 | Outcome hints (tags, partial text) | Partially visible |
 | Exact rewards | Hidden until resolved or discovered |
-| Matchup modifiers (class/race/attribute) | Hidden until discovered |
-| Injury/death risk for bad matchups | Hidden or hinted ("High risk") |
+| Class bonuses (e.g. Cleric always wins) | Hidden until discovered |
+| Injury/death on fail | Hidden or hinted ("High risk") |
 
 **Example — Clear Undead Crypt**
 
-| Input (visible) | Partial output (visible) | Hidden outcome |
-|-----------------|----------------------------|----------------|
-| Cost: 2 Attack, 1 Magic | Hint: "Holy specialists thrive" | Cleric assigned → bonus reward |
-| Send: 1–2 adventurers | Tag: Risk | Fighter assigned → severe injury |
+| Visible | Hidden (MVP 1) | Deferred |
+|---------|----------------|----------|
+| Required: 2 Attack, 1 Magic; 1 hero | Cleric → always succeeds, extra gold | Low defense → injury on success / death on fail |
+| Succeeds at 3 Attack + 2 Magic (hidden) | Failed fighter → death | Heavy support → uncover a new contract |
+| Optional extra tokens and +1 hero | | |
 
-To perform a contract: player pays token cost from **this turn's drawn pool** and selects which roster adventurers go on the mission. Resolution applies matchup logic.
+Success is `required tokens + extra tokens + hero attributes` against hidden totals. A warrior plus an extra Magic token can succeed; a warrior plus a mage can succeed on attributes.
+
+To perform a contract: pay the required tokens, send the minimum heroes, optionally add extras, then resolve success/fail and any hidden matchup. **One contract per round.**
 
 ### Guild: other actions
 
@@ -137,7 +142,7 @@ Same rule: **pay tokens + send adventurers**. Inputs clear; outcomes partial.
 
 | Always visible | Partially visible | Hidden until triggered |
 |----------------|-------------------|------------------------|
-| Token costs | Outcome hints, risk tags | Exact reward amounts |
+| Token costs | Outcome hints, risk tags | Exact reward amounts, success totals |
 | Adventurer attributes & class | "Bonus for holy types" | Full matchup table row |
 | Tokens added to discard | Reward tier ("good / poor") | Which class triggers bonus |
 | Retire draw math | Contract difficulty band | Exact injury severity |
