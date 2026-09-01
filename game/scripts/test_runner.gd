@@ -159,6 +159,80 @@ func _run_tests() -> Array:
 		errors.append("Any 3 tokens should convert into 1")
 	elif ActionToken.total(gs.drawn_tokens) != 1 or gs.drawn_tokens[ActionToken.Type.SUPPORT] != 1:
 		errors.append("Mixed convert should leave a single support token")
+	elif ActionToken.total(gs.converted_tokens) != 1:
+		errors.append("Converted token should be tracked separately")
+
+	gs.new_run()
+	gs.phase = gs.Phase.ACT
+	gs.bag.clear()
+	gs._clear_drawn_tokens()
+	var discard_before: int = gs.bag.discard_count()
+	ActionToken.add_tokens(gs.drawn_tokens, ActionToken.Type.ATTACK, 2)
+	ActionToken.add_tokens(gs.drawn_tokens, ActionToken.Type.DEFENSE, 1)
+	gs.end_turn()
+	if gs.bag.discard_count() != discard_before + 3:
+		errors.append("Unspent drawn tokens should return to discard at end of turn")
+
+	gs.new_run()
+	gs.phase = gs.Phase.ACT
+	gs.bag.clear()
+	discard_before = gs.bag.discard_count()
+	gs.drawn_tokens = ActionToken.empty_pool()
+	ActionToken.add_tokens(gs.drawn_tokens, ActionToken.Type.ATTACK, 2)
+	var convert_pair: Dictionary = ActionToken.empty_pool()
+	ActionToken.add_tokens(convert_pair, ActionToken.Type.ATTACK, 2)
+	gs.convert_tokens(convert_pair, ActionToken.Type.MAGIC)
+	gs.end_turn()
+	if gs.bag.discard_count() != discard_before + 2:
+		errors.append("Conversion inputs should return to discard; only the created token is destroyed at end of turn")
+
+	gs.new_run()
+	gs.phase = gs.Phase.ACT
+	gs.bag.clear()
+	discard_before = gs.bag.discard_count()
+	gs.drawn_tokens = ActionToken.empty_pool()
+	ActionToken.add_tokens(gs.drawn_tokens, ActionToken.Type.DEFENSE, 1)
+	ActionToken.add_tokens(gs.drawn_tokens, ActionToken.Type.LEADERSHIP, 1)
+	var ranger_for_escort: int = -1
+	for adventurer in gs.roster:
+		if String(gs.get_template(adventurer.template_id).get("class", "")) == "Ranger":
+			ranger_for_escort = adventurer.instance_id
+			break
+	if ranger_for_escort != -1:
+		gs.contracts = ["contract_escort"]
+		gs.resolved_contracts.clear()
+		gs.did_contract_this_turn = false
+		gs.assigned_this_turn.clear()
+		gs.try_resolve_contract("contract_escort", [ranger_for_escort])
+		if gs.bag.discard_count() != discard_before:
+			errors.append("Contract tokens should be destroyed, not sent to discard")
+
+	gs.new_run()
+	gs.phase = gs.Phase.ACT
+	gs.bag.clear()
+	discard_before = gs.bag.discard_count()
+	gs.drawn_tokens = ActionToken.empty_pool()
+	ActionToken.add_tokens(gs.drawn_tokens, ActionToken.Type.LEADERSHIP, 1)
+	var trainee_id: int = gs.roster[0].instance_id
+	gs.assigned_this_turn.clear()
+	gs.did_guild_action_this_turn = false
+	gs.try_guild_action("action_train", [trainee_id])
+	if gs.bag.discard_count() != discard_before + 1:
+		errors.append("Guild facility tokens should return to discard")
+
+	gs.new_run()
+	gs.phase = gs.Phase.ACT
+	gs.drawn_tokens = ActionToken.empty_pool()
+	ActionToken.add_tokens(gs.drawn_tokens, ActionToken.Type.ATTACK, 2)
+	ActionToken.add_tokens(gs.drawn_tokens, ActionToken.Type.MAGIC, 2)
+	gs.contracts = ["contract_undead"]
+	gs.resolved_contracts.clear()
+	gs.did_contract_this_turn = false
+	gs.assigned_this_turn.clear()
+	var too_many: Dictionary = ActionToken.empty_pool()
+	ActionToken.add_tokens(too_many, ActionToken.Type.MAGIC, 3)
+	if gs.try_resolve_contract("contract_undead", [gs.roster[0].instance_id], too_many):
+		errors.append("Contract should reject more than max_tokens")
 
 	var ranger_id: int = -1
 	var second_hero_id: int = -1

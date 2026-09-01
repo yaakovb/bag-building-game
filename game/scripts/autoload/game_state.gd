@@ -45,6 +45,7 @@ var result: int = GameResult.NONE
 var guild_coin: int = 5
 var roster: Array = []
 var drawn_tokens: Dictionary = ActionToken.empty_pool()
+var converted_tokens: Dictionary = ActionToken.empty_pool()
 var assigned_this_turn: Array = []
 var contracts: Array = []
 var resolved_contracts: Array = []
@@ -85,7 +86,7 @@ func new_run() -> void:
 	result = GameResult.NONE
 	guild_coin = 5
 	roster.clear()
-	drawn_tokens = ActionToken.empty_pool()
+	_clear_drawn_tokens()
 	assigned_this_turn.clear()
 	contracts.clear()
 	resolved_contracts.clear()
@@ -117,6 +118,12 @@ func get_living_roster() -> Array:
 
 func get_template(template_id: String) -> Dictionary:
 	return adventurer_templates[template_id]
+
+
+func get_contract_max_tokens(contract_id: String) -> int:
+	var contract: Dictionary = contract_templates[contract_id]
+	var costs: Dictionary = ActionToken.parse_cost_map(contract.get("token_cost", {}))
+	return int(contract.get("max_tokens", ActionToken.total(costs)))
 
 
 func get_adventurer_by_id(instance_id: int) -> AdventurerInstance:
@@ -190,7 +197,7 @@ func retire(instance_id: int) -> bool:
 	var template: Dictionary = adventurer_templates[adventurer.template_id]
 	var draw_count := get_retire_draw(adventurer)
 	var drawn: Array = bag.draw(draw_count)
-	drawn_tokens = ActionToken.empty_pool()
+	_clear_drawn_tokens()
 	for token_type in drawn:
 		ActionToken.add_tokens(drawn_tokens, token_type, 1)
 
@@ -261,11 +268,15 @@ func try_resolve_contract(contract_id: String, assignee_ids: Array, extra_tokens
 
 	var costs: Dictionary = ActionToken.parse_cost_map(contract.get("token_cost", {}))
 	var payment: Dictionary = ActionToken.combined_pool(costs, extras)
+	var max_tokens := get_contract_max_tokens(contract_id)
+	if ActionToken.total(payment) > max_tokens:
+		_emit_message("This contract accepts at most %d tokens." % max_tokens)
+		return false
 	if not ActionToken.can_pay(drawn_tokens, payment):
 		_emit_message("Not enough drawn tokens for this contract.")
 		return false
 
-	ActionToken.pay(drawn_tokens, payment)
+	_consume_drawn_tokens(payment, false)
 	for instance_id in assignee_ids:
 		assigned_this_turn.append(instance_id)
 
@@ -410,7 +421,7 @@ func try_guild_action(action_id: String, assignee_ids: Array) -> bool:
 		_emit_message("Not enough drawn tokens.")
 		return false
 
-	ActionToken.pay(drawn_tokens, costs)
+	_consume_drawn_tokens(costs, true)
 	assigned_this_turn.append(instance_id)
 	did_guild_action_this_turn = true
 
@@ -457,8 +468,9 @@ func convert_tokens(payment: Dictionary, to_type: int) -> bool:
 		_emit_message("Not enough tokens to change.")
 		return false
 
-	ActionToken.pay(drawn_tokens, payment)
+	_consume_drawn_tokens(payment, true)
 	ActionToken.add_tokens(drawn_tokens, to_type, 1)
+	ActionToken.add_tokens(converted_tokens, to_type, 1)
 	_emit_message("Changed tokens into %s." % ActionToken.NAMES[to_type])
 	state_changed.emit()
 	return true
@@ -468,7 +480,7 @@ func end_turn() -> void:
 	if phase != Phase.ACT:
 		return
 
-	drawn_tokens = ActionToken.empty_pool()
+	_return_unspent_drawn_tokens()
 	assigned_this_turn.clear()
 
 	if _check_lose():
@@ -558,6 +570,33 @@ func _apply_pending_fail_injury(excluded_ids: Array) -> String:
 
 func _emit_message(text: String) -> void:
 	message_posted.emit(text)
+
+
+func _clear_drawn_tokens() -> void:
+	drawn_tokens = ActionToken.empty_pool()
+	converted_tokens = ActionToken.empty_pool()
+
+
+func _consume_drawn_tokens(payment: Dictionary, to_discard: bool) -> void:
+	for token_type in ActionToken.ALL_TYPES:
+		var amount: int = int(payment.get(token_type, 0))
+		if amount <= 0:
+			continue
+		var converted_used: int = mini(amount, int(converted_tokens.get(token_type, 0)))
+		converted_tokens[token_type] = int(converted_tokens.get(token_type, 0)) - converted_used
+		drawn_tokens[token_type] = int(drawn_tokens.get(token_type, 0)) - amount
+		if to_discard:
+			bag.add_to_discard(token_type, amount)
+
+
+func _return_unspent_drawn_tokens() -> void:
+	for token_type in ActionToken.ALL_TYPES:
+		var remaining: int = int(drawn_tokens.get(token_type, 0))
+		var converted_left: int = int(converted_tokens.get(token_type, 0))
+		var to_discard: int = remaining - converted_left
+		if to_discard > 0:
+			bag.add_to_discard(token_type, to_discard)
+	_clear_drawn_tokens()
 
 
 func _record_contract_result(

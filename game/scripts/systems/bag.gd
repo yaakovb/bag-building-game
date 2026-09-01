@@ -28,8 +28,12 @@ func add_to_discard(token_type: int, amount: int) -> void:
 
 
 func add_contribution(contribution: Dictionary) -> void:
-	for token_type in contribution.keys():
-		add_to_discard(token_type, contribution[token_type])
+	add_pool_to_discard(contribution)
+
+
+func add_pool_to_discard(pool: Dictionary) -> void:
+	for token_type in pool.keys():
+		add_to_discard(token_type, int(pool[token_type]))
 
 
 func shuffle() -> void:

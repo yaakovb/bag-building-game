@@ -13,7 +13,6 @@ const CARD_BG := Color("eceff3")
 const INK_LINE := Color("1e3a5f")
 const DRAWN_CHIP_SIZE := 40.0
 const COST_CHIP_SIZE := 26.0
-const EXTRA_TOKEN_SLOTS := 2
 const DRAG_SCROLL_EDGE := 72.0
 const DRAG_SCROLL_SPEED := 620.0
 
@@ -373,6 +372,13 @@ func _build_contracts() -> void:
 
 		var costs: Dictionary = ActionToken.parse_cost_map(contract.get("token_cost", {}))
 		_add_chip_block(body, "Required tokens", costs)
+		var max_tokens: int = GameState.get_contract_max_tokens(contract_id)
+		body.add_child(_card_label(
+			"Up to %d tokens on this contract" % max_tokens,
+			12,
+			TEXT_DIM,
+			false
+		))
 
 		var reward_text: String = String(GameState.discovered_rewards.get(contract_id, "???"))
 		body.add_child(_card_label(
@@ -451,10 +457,7 @@ func _party_label(contract: Dictionary) -> Label:
 
 
 func _slot_limit_for_contract(contract_id: String) -> int:
-	var costs: Dictionary = ActionToken.parse_cost_map(
-		GameState.contract_templates[contract_id].get("token_cost", {})
-	)
-	return ActionToken.total(costs) + EXTRA_TOKEN_SLOTS
+	return GameState.get_contract_max_tokens(contract_id)
 
 
 func _slot_limit_for_facility(action_id: String) -> int:
